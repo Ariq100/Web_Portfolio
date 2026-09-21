@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 export type V3 = [number, number, number];
+/** Grey level (0..1) or an RGB colour, multiplied with the material colour. */
+export type Shade = number | V3;
 
 /** Accumulates line segments (pairs of points) and turns them into one BufferGeometry. */
 export class LineBuilder {
@@ -25,20 +27,27 @@ export class LineBuilder {
     return this;
   }
 
-  line(a: V3, b: V3, brightness = 1) {
+  /** Colour applied to lines given as a plain grey level (e.g. a car's paint). */
+  tint: V3 = [1, 1, 1];
+
+  line(a: V3, b: V3, brightness: Shade = 1) {
     this.tmpA.set(...a).applyMatrix4(this.matrix);
     this.tmpB.set(...b).applyMatrix4(this.matrix);
     this.positions.push(this.tmpA.x, this.tmpA.y, this.tmpA.z, this.tmpB.x, this.tmpB.y, this.tmpB.z);
-    this.colors.push(brightness, brightness, brightness, brightness, brightness, brightness);
+    const [r, g, b2] =
+      typeof brightness === 'number'
+        ? [this.tint[0] * brightness, this.tint[1] * brightness, this.tint[2] * brightness]
+        : brightness;
+    this.colors.push(r, g, b2, r, g, b2);
   }
 
-  polyline(points: V3[], closed = false, brightness = 1) {
+  polyline(points: V3[], closed = false, brightness: Shade = 1) {
     for (let i = 0; i < points.length - 1; i++) this.line(points[i], points[i + 1], brightness);
     if (closed && points.length > 2) this.line(points[points.length - 1], points[0], brightness);
   }
 
   /** Ellipse in a local plane: `axisU`/`axisV` choose which world axes it spans. */
-  ellipse(center: V3, ru: number, rv: number, plane: 'xy' | 'xz' | 'yz', segments = 24, brightness = 1) {
+  ellipse(center: V3, ru: number, rv: number, plane: 'xy' | 'xz' | 'yz', segments = 24, brightness: Shade = 1) {
     const pts: V3[] = [];
     for (let i = 0; i < segments; i++) {
       const a = (i / segments) * Math.PI * 2;
@@ -52,7 +61,7 @@ export class LineBuilder {
   }
 
   /** Rings + meridians of an ellipsoid. */
-  ellipsoid(center: V3, r: V3, rings = 7, meridians = 12, brightness = 1) {
+  ellipsoid(center: V3, r: V3, rings = 7, meridians = 12, brightness: Shade = 1) {
     const point = (lat: number, lon: number): V3 => [
       center[0] + Math.cos(lat) * Math.cos(lon) * r[0],
       center[1] + Math.sin(lat) * r[1],
@@ -73,7 +82,7 @@ export class LineBuilder {
   }
 
   /** Surface of revolution around Y from a (radius, y) profile. */
-  lathe(profile: [number, number][], segments = 14, center: V3 = [0, 0, 0], zScale = 1, brightness = 1) {
+  lathe(profile: [number, number][], segments = 14, center: V3 = [0, 0, 0], zScale = 1, brightness: Shade = 1) {
     const ring = (r: number, y: number) => {
       const pts: V3[] = [];
       for (let j = 0; j < segments * 2; j++) {
@@ -94,7 +103,7 @@ export class LineBuilder {
   }
 
   /** Tube around a curve: cross-section rings plus a few longitudinal lines. */
-  tube(curvePoints: V3[], radius: (t: number) => number, samples = 24, radial = 6, brightness = 1) {
+  tube(curvePoints: V3[], radius: (t: number) => number, samples = 24, radial = 6, brightness: Shade = 1) {
     const curve = new THREE.CatmullRomCurve3(curvePoints.map((p) => new THREE.Vector3(...p)));
     const frames = curve.computeFrenetFrames(samples, false);
     const rings: V3[][] = [];

@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { imageWireframe } from './imageWireframe';
 import { photoPoints } from './photoPoints';
-import { cat, soccerBall } from './models';
+import { cat, football } from './models';
 import { astonVantage, porsche930 } from './cars';
 
 export type AssetName = 'me' | 'lelouch' | 'ball' | 'cat' | 'porsche' | 'aston';
@@ -42,14 +42,14 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'stitching soccer ball',
+    label: 'stitching football',
     run: async () => {
       await nextFrame();
-      assets.ball = soccerBall();
+      assets.ball = football();
     },
   },
   {
-    label: 'sculpting cat',
+    label: 'sculpting jiji',
     run: async () => {
       await nextFrame();
       assets.cat = cat();

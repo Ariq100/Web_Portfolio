@@ -1,151 +1,191 @@
 import * as THREE from 'three';
-import { LineBuilder, type V3 } from './lines';
+import { LineBuilder, type Shade, type V3 } from './lines';
+
+const scale = (c: V3, k: number): V3 => [c[0] * k, c[1] * k, c[2] * k];
 
 /* ------------------------------------------------------------------ */
-/* Soccer ball: truncated icosahedron projected onto a sphere.         */
+/* Football: the Puma Premier League ball. No pentagons; instead large */
+/* hook-shaped swooshes wrap around a white sphere.                    */
 /* ------------------------------------------------------------------ */
 
-export function soccerBall() {
+const VIOLET: V3 = [0.55, 0.45, 1];
+const PINK: V3 = [1, 0.42, 0.78];
+const CYAN_BALL: V3 = [0.4, 0.85, 1];
+
+export function football() {
+  const lb = new LineBuilder();
+
+  // White ball: faint latitude and longitude rings.
+  for (let i = 1; i < 8; i++) {
+    const lat = -Math.PI / 2 + (i / 8) * Math.PI;
+    lb.ellipse([0, Math.sin(lat), 0], Math.cos(lat), Math.cos(lat), 'xz', 64, 0.28);
+  }
+  for (let j = 0; j < 8; j++) {
+    const lon = (j / 8) * Math.PI;
+    const pts: V3[] = [];
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      pts.push([Math.cos(a) * Math.cos(lon), Math.sin(a), Math.cos(a) * Math.sin(lon)]);
+    }
+    lb.polyline(pts, true, 0.2);
+  }
+
+  // One hook per icosahedron vertex, each spun to a different angle.
   const phi = (1 + Math.sqrt(5)) / 2;
-  const ico: THREE.Vector3[] = [
+  const centres = [
     [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
     [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
     [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1],
-  ].map(([x, y, z]) => new THREE.Vector3(x, y, z));
-  const edgeLen = 2;
+  ].map(([x, y, z]) => new THREE.Vector3(x, y, z).normalize());
 
-  // Cut every icosahedron edge at 1/3 and 2/3.
-  const verts: THREE.Vector3[] = [];
-  const pentagons: THREE.Vector3[][] = ico.map(() => []);
-  for (let i = 0; i < ico.length; i++) {
-    for (let j = i + 1; j < ico.length; j++) {
-      if (Math.abs(ico[i].distanceTo(ico[j]) - edgeLen) > 1e-6) continue;
-      const a = ico[i].clone().lerp(ico[j], 1 / 3);
-      const b = ico[i].clone().lerp(ico[j], 2 / 3);
-      verts.push(a, b);
-      pentagons[i].push(a);
-      pentagons[j].push(b);
+  centres.forEach((n, index) => {
+    const up = Math.abs(n.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const u0 = new THREE.Vector3().crossVectors(n, up).normalize();
+    const v0 = new THREE.Vector3().crossVectors(n, u0);
+    const spin = index * 2.39; // golden-angle spread so no two hooks line up
+    const u = u0.clone().multiplyScalar(Math.cos(spin)).addScaledVector(v0, Math.sin(spin));
+    const v = new THREE.Vector3().crossVectors(n, u);
+    const onBall = (a: number, b: number, lift = 1.004): V3 => {
+      const p = n.clone().addScaledVector(u, a).addScaledVector(v, b).normalize().multiplyScalar(lift);
+      return [p.x, p.y, p.z];
+    };
+
+    // Centreline: a 210° arc that runs straight out at one end, like a "J".
+    const R = 0.34;
+    const centre: [number, number][] = [];
+    const tangent: [number, number][] = [];
+    const arcSteps = 28;
+    for (let i = 0; i <= arcSteps; i++) {
+      const t = (i / arcSteps) * 3.7;
+      centre.push([Math.cos(t) * R, Math.sin(t) * R]);
+      tangent.push([-Math.sin(t), Math.cos(t)]);
     }
-  }
-
-  const lb = new LineBuilder();
-  const onSphere = (v: THREE.Vector3): V3 => {
-    const n = v.clone().normalize();
-    return [n.x, n.y, n.z];
-  };
-  const arc = (a: THREE.Vector3, b: THREE.Vector3, brightness = 1, steps = 6) => {
-    const pts: V3[] = [];
-    for (let s = 0; s <= steps; s++) pts.push(onSphere(a.clone().lerp(b, s / steps)));
-    lb.polyline(pts, false, brightness);
-  };
-
-  // All truncated-icosahedron edges share one length: connect those pairs.
-  const target = verts[0].distanceTo(verts[1]);
-  for (let i = 0; i < verts.length; i++) {
-    for (let j = i + 1; j < verts.length; j++) {
-      if (Math.abs(verts[i].distanceTo(verts[j]) - target) < 1e-4) arc(verts[i], verts[j]);
+    const [ex, ey] = centre[centre.length - 1];
+    const [tx, ty] = tangent[tangent.length - 1];
+    for (let i = 1; i <= 6; i++) {
+      centre.push([ex + tx * 0.05 * i, ey + ty * 0.05 * i]);
+      tangent.push([tx, ty]);
     }
-  }
 
-  // Dark pentagon panels: nested outlines so they read as filled patches.
-  ico.forEach((center, i) => {
-    const pts = pentagons[i];
-    const c = center.clone().multiplyScalar(0.7);
-    const sorted = sortAround(pts, center);
-    for (const inset of [0.72, 0.46, 0.22]) {
-      const ring = sorted.map((p) => p.clone().lerp(c, 1 - inset));
-      for (let k = 0; k < ring.length; k++) arc(ring[k], ring[(k + 1) % ring.length], 0.75, 4);
+    // Band edges: rounded head, tapering to a point at the tail.
+    const band = (offset: number) =>
+      centre.map(([cx, cy], i) => {
+        const f = i / (centre.length - 1);
+        const width = 0.11 * Math.min(1, (1 - f) * 3.5) * Math.min(1, 0.35 + f * 4);
+        const [nx, ny] = [-tangent[i][1], tangent[i][0]];
+        return onBall(cx + nx * width * offset, cy + ny * width * offset);
+      });
+
+    const outer = band(1);
+    const inner = band(-1);
+    lb.polyline([...outer, ...inner.reverse()], true, VIOLET);
+    // Inner colour sweeps, alternating pink and cyan like the printed gradient.
+    const accent = index % 2 === 0 ? PINK : CYAN_BALL;
+    lb.polyline(band(0.7), false, scale(VIOLET, 0.8));
+    lb.polyline(band(0.35), false, accent);
+    lb.polyline(band(0), false, accent);
+    lb.polyline(band(-0.4), false, scale(accent, 0.7));
+    // Short "flick" beside each hook.
+    const fx: V3[] = [];
+    for (let i = 0; i <= 8; i++) {
+      const t = -0.6 + (i / 8) * 0.9;
+      fx.push(onBall(Math.cos(t) * (R + 0.16), Math.sin(t) * (R + 0.16)));
     }
+    lb.polyline(fx, false, scale(VIOLET, 0.8));
   });
 
-  // A couple of faint latitude rings give the sphere volume.
-  for (const lat of [-0.5, 0, 0.5]) lb.ellipse([0, Math.sin(lat), 0], Math.cos(lat), Math.cos(lat), 'xz', 48, 0.25);
   return lb.build();
 }
 
-function sortAround(points: THREE.Vector3[], axis: THREE.Vector3) {
-  const n = axis.clone().normalize();
-  const u = new THREE.Vector3().crossVectors(n, Math.abs(n.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)).normalize();
-  const v = new THREE.Vector3().crossVectors(n, u);
-  return [...points].sort((a, b) => Math.atan2(a.dot(v), a.dot(u)) - Math.atan2(b.dot(v), b.dot(u)));
-}
+/* ------------------------------------------------------------------ */
+/* Jiji: big round head, huge eyes, tall ears, a slim seated body and  */
+/* a long tail curling round to the side.                              */
+/* ------------------------------------------------------------------ */
 
-/* ------------------------------------------------------------------ */
-/* Sitting cat built from rings and meridians.                         */
-/* ------------------------------------------------------------------ */
+const BODY: V3 = [1, 0.84, 0.04];
+const EYE: V3 = [0.96, 0.98, 0.92];
+const INNER_EAR: V3 = [0.78, 0.6, 1];
+const NOSE: V3 = [1, 0.55, 0.68];
 
 export function cat() {
   const lb = new LineBuilder();
+  const body = (k: number): Shade => scale(BODY, k);
 
-  // Body: pear-shaped, chest pushed forward under the head.
-  lb.setTransform([0, 0, -0.12], [0.2, 0, 0]);
+  // Slim seated body leaning back slightly, with a rounded chest.
+  lb.setTransform([0, 0, -0.05], [0.12, 0, 0]);
   lb.lathe(
     [
-      [0.0, 0.0], [0.46, 0.02], [0.64, 0.14], [0.72, 0.36], [0.7, 0.6], [0.62, 0.84],
-      [0.52, 1.06], [0.42, 1.26], [0.34, 1.44], [0.27, 1.58], [0.0, 1.66],
+      [0.0, 0.0], [0.36, 0.02], [0.46, 0.18], [0.48, 0.45], [0.42, 0.8], [0.33, 1.1],
+      [0.26, 1.35], [0.22, 1.6], [0.2, 1.75], [0.0, 1.8],
     ],
     12,
     [0, 0, 0],
-    0.85,
+    0.9,
+    body(0.6),
   );
   lb.resetTransform();
+  lb.ellipsoid([0, 1.05, 0.24], [0.3, 0.45, 0.24], 5, 10, body(0.45));
 
-  // Haunches.
-  lb.ellipsoid([0.46, 0.36, -0.12], [0.3, 0.36, 0.48], 6, 10, 0.9);
-  lb.ellipsoid([-0.46, 0.36, -0.12], [0.3, 0.36, 0.48], 6, 10, 0.9);
-
-  // Front legs and paws.
-  for (const side of [-1, 1]) {
-    lb.tube([[0.22 * side, 1.2, 0.42], [0.23 * side, 0.62, 0.62], [0.22 * side, 0.08, 0.68]], (t) => 0.11 - t * 0.02, 10, 6);
-    lb.ellipsoid([0.22 * side, 0.06, 0.78], [0.12, 0.07, 0.17], 4, 8);
+  // Haunches, thin front legs and small paws.
+  for (const s of [-1, 1]) {
+    lb.ellipsoid([s * 0.34, 0.32, -0.08], [0.2, 0.32, 0.38], 5, 9, body(0.55));
+    lb.tube([[s * 0.13, 1.1, 0.3], [s * 0.14, 0.55, 0.38], [s * 0.13, 0.06, 0.4]], () => 0.065, 12, 6, body(0.8));
+    lb.ellipsoid([s * 0.13, 0.04, 0.47], [0.08, 0.05, 0.11], 3, 8, body(0.8));
   }
 
-  // Head.
-  const head: V3 = [0, 1.95, 0.3];
-  lb.ellipsoid(head, [0.44, 0.37, 0.38], 7, 12);
-  lb.ellipsoid([0, 1.83, 0.48], [0.17, 0.12, 0.13], 4, 8); // muzzle
+  // Everything on the head sits low, right on the shoulders.
+  lb.setTransform([0, -0.2, 0]);
 
-  // Ears.
-  for (const side of [-1, 1]) {
-    const apex: V3 = [0.3 * side, 2.55, 0.12];
-    const base: V3[] = [
-      [0.1 * side, 2.26, 0.22],
-      [0.42 * side, 2.12, 0.2],
-      [0.3 * side, 2.2, -0.02],
-    ];
-    base.forEach((b) => lb.line(apex, b));
-    lb.polyline(base, true);
-    lb.line([0.29 * side, 2.46, 0.16], [0.22 * side, 2.24, 0.24], 0.6); // inner ear
+  // Big head.
+  lb.ellipsoid([0, 2.15, 0.05], [0.6, 0.52, 0.5], 8, 14, body(0.55));
+
+  // Tall ears with lavender insides.
+  for (const s of [-1, 1]) {
+    const apex: V3 = [s * 0.5, 3.1, -0.02];
+    const base: V3[] = [[s * 0.14, 2.6, 0.22], [s * 0.6, 2.35, 0.08], [s * 0.36, 2.5, -0.25]];
+    base.forEach((b) => lb.line(apex, b, body(1)));
+    lb.polyline(base, true, body(0.9));
+    lb.polyline([[s * 0.47, 2.94, 0.04], [s * 0.22, 2.62, 0.2], [s * 0.53, 2.44, 0.12]], true, INNER_EAR);
+    lb.polyline([[s * 0.44, 2.84, 0.07], [s * 0.3, 2.63, 0.17], [s * 0.49, 2.53, 0.12]], true, scale(INNER_EAR, 0.7));
   }
 
-  // Eyes with slit pupils.
-  for (const side of [-1, 1]) {
-    const c: V3 = [0.16 * side, 2.0, 0.53];
-    const eye: V3[] = [];
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * Math.PI * 2;
-      eye.push([c[0] + Math.cos(a) * 0.085, c[1] + Math.sin(a) * 0.05 * (1 - 0.3 * Math.abs(Math.cos(a))), c[2]]);
-    }
-    lb.polyline(eye, true);
-    lb.line([c[0], c[1] + 0.045, c[2] + 0.005], [c[0], c[1] - 0.045, c[2] + 0.005]);
+  // Huge eyes set on the curve of the face, with small oval pupils.
+  for (const s of [-1, 1]) {
+    const yaw = 0.42;
+    const c: V3 = [s * 0.25, 2.2, 0.47];
+    const tangent: V3 = [Math.cos(yaw), 0, -s * Math.sin(yaw)];
+    const at = (lx: number, ly: number): V3 => [c[0] + tangent[0] * lx, c[1] + ly, c[2] + tangent[2] * lx];
+    const ring = (rx: number, ry: number, ox = 0, oy = 0, shade: Shade = EYE) => {
+      const pts: V3[] = [];
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * Math.PI * 2;
+        pts.push(at(ox + Math.cos(a) * rx, oy + Math.sin(a) * ry));
+      }
+      lb.polyline(pts, true, shade);
+    };
+    ring(0.17, 0.2);
+    ring(0.155, 0.185, 0, 0, scale(EYE, 0.6));
+    for (const k of [1, 0.66, 0.33]) ring(0.035 * k, 0.06 * k, s * -0.015, 0.0, EYE);
   }
 
-  // Nose, mouth, whiskers.
-  lb.polyline([[-0.05, 1.89, 0.6], [0.05, 1.89, 0.6], [0, 1.84, 0.61]], true);
-  lb.polyline([[0, 1.84, 0.61], [0, 1.79, 0.6], [-0.06, 1.76, 0.58]]);
-  lb.line([0, 1.79, 0.6], [0.06, 1.76, 0.58]);
-  for (const side of [-1, 1]) {
-    for (const [dy, dz] of [[0.04, 0], [0, 0.01], [-0.04, 0.02]]) {
-      lb.line([0.12 * side, 1.82 + dy * 0.3, 0.58], [0.58 * side, 1.84 + dy * 2, 0.45 + dz], 0.7);
-    }
+  // Tiny nose, mouth and whiskers.
+  lb.polyline([[-0.045, 2.03, 0.52], [0.045, 2.03, 0.52], [0, 1.99, 0.53]], true, NOSE);
+  lb.polyline([[0, 1.99, 0.53], [0, 1.95, 0.52], [-0.05, 1.93, 0.5]], false, body(0.8));
+  lb.line([0, 1.95, 0.52], [0.05, 1.93, 0.5], body(0.8));
+  for (const s of [-1, 1]) {
+    lb.line([s * 0.14, 2.0, 0.47], [s * 0.6, 2.07, 0.36], body(0.5));
+    lb.line([s * 0.14, 1.97, 0.47], [s * 0.58, 1.95, 0.36], body(0.5));
   }
 
-  // Tail curling around the front paws.
+  lb.resetTransform();
+
+  // Long tail sweeping out to the left and curling up.
   lb.tube(
-    [[0, 0.2, -0.62], [0.45, 0.06, -0.72], [0.82, 0.06, -0.25], [0.78, 0.06, 0.3], [0.48, 0.08, 0.7]],
-    (t) => 0.1 - t * 0.04,
-    30,
+    [[0, 0.12, -0.38], [-0.45, 0.08, -0.42], [-0.85, 0.1, -0.1], [-1.05, 0.2, 0.25], [-1.1, 0.45, 0.45], [-0.95, 0.62, 0.5]],
+    (t) => 0.06 - t * 0.02,
+    36,
     6,
+    body(0.8),
   );
 
   return lb.build();

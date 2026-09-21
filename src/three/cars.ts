@@ -1,4 +1,4 @@
-import { LineBuilder, type V3 } from './lines';
+import { LineBuilder, type Shade, type V3 } from './lines';
 
 /*
  * Cars are lofted from cross-sections along their length (x: rear 0 → front, y: up,
@@ -37,6 +37,12 @@ interface Wheel {
 
 type Side = 1 | -1;
 
+const GLASS: V3 = [0.55, 0.72, 0.88];
+const HEADLAMP: V3 = [1, 1, 0.94];
+const AMBER: V3 = [1, 0.62, 0.1];
+const TAIL_RED: V3 = [1, 0.22, 0.18];
+const TRIM: V3 = [0.45, 0.5, 0.56];
+
 function catmull(values: number[], t: number) {
   const n = values.length;
   const i = Math.min(n - 2, Math.max(0, Math.floor(t)));
@@ -53,7 +59,8 @@ class CarBody {
   private cols: Record<keyof Station, number[]>;
   readonly length: number;
 
-  constructor(stations: Station[], private wheels: Wheel[]) {
+  constructor(stations: Station[], private wheels: Wheel[], paint: V3 = [1, 1, 1]) {
+    this.lb.tint = paint;
     const col = (k: keyof Station) => stations.map((s) => s[k] ?? 0);
     this.cols = {
       x: col('x'), hw: col('hw'), bottom: col('bottom'), belt: col('belt'), crest: col('crest'),
@@ -103,7 +110,7 @@ class CarBody {
   }
 
   /** Outline drawn on the surface through (x, k, side) control points. */
-  path(points: [number, number, Side?][], closed = false, brightness = 1, steps = 6) {
+  path(points: [number, number, Side?][], closed = false, brightness: Shade = 1, steps = 6) {
     const pts: V3[] = [];
     const n = closed ? points.length : points.length - 1;
     for (let i = 0; i < n; i++) {
@@ -128,7 +135,7 @@ class CarBody {
   }
 
   /** Same outline on both sides of the car. */
-  mirrored(points: [number, number][], closed = false, brightness = 1) {
+  mirrored(points: [number, number][], closed = false, brightness: Shade = 1) {
     this.path(points.map(([x, k]) => [x, k, 1]), closed, brightness);
     this.path(points.map(([x, k]) => [x, k, -1]), closed, brightness);
   }
@@ -172,12 +179,15 @@ class CarBody {
 
   /** Tyres, rims and arch lips. */
   drawWheels() {
+    const paint = this.lb.tint;
     for (const w of this.wheels) {
       const hw = this.station(w.x).hw;
       for (const side of [-1, 1] as Side[]) {
         const zOut = side * (hw - 0.04);
         const zIn = side * (hw - 0.3);
         const zRim = side * (hw - (w.dish ? 0.1 : 0.06));
+        // Tyres and rims in neutral grey; the arch lip below uses the paint colour.
+        this.lb.tint = [0.72, 0.74, 0.78];
         const c = (r: number, a: number, z: number): V3 => [w.x + Math.cos(a) * r, w.r + Math.sin(a) * r, z];
         this.lb.ellipse([w.x, w.r, zOut], w.r, w.r, 'xy', 32);
         this.lb.ellipse([w.x, w.r, zIn], w.r, w.r, 'xy', 32, 0.5);
@@ -200,6 +210,7 @@ class CarBody {
             this.lb.line(c(w.r * 0.14, a + 0.12, zRim), c(w.r * 0.66, a + 0.2, zRim), 0.9);
           }
         }
+        this.lb.tint = paint;
         const arch: V3[] = [];
         for (let i = 0; i <= 20; i++) {
           const a = (i / 20) * Math.PI;
@@ -211,7 +222,7 @@ class CarBody {
   }
 
   /** A ring standing on the body, facing along +x (headlights) or -x (tail lamps). */
-  lamp(center: V3, r: number, brightness = 1, tilt = 0) {
+  lamp(center: V3, r: number, brightness: Shade = 1, tilt = 0) {
     const pts: V3[] = [];
     for (let i = 0; i < 20; i++) {
       const a = (i / 20) * Math.PI * 2;
@@ -251,16 +262,18 @@ export function porsche930() {
       { x: 1.02, r: 0.315, spokes: 5, dish: true },
       { x: 3.29, r: 0.305, spokes: 5, dish: true },
     ],
+    // The photographed cars are black; silver keeps the lines visible on a dark page.
+    [0.82, 0.84, 0.9],
   );
   car.loft();
   car.drawWheels();
 
   // Greenhouse: side window with the classic quarter light, windscreen and rear glass.
-  car.mirrored([[2.76, 4.15], [2.42, 4.88], [1.6, 4.9], [1.28, 4.35], [1.4, 4.12]], true);
-  car.mirrored([[1.86, 4.12], [1.86, 4.9]], false, 0.8);
+  car.mirrored([[2.76, 4.15], [2.42, 4.88], [1.6, 4.9], [1.28, 4.35], [1.4, 4.12]], true, GLASS);
+  car.mirrored([[1.86, 4.12], [1.86, 4.9]], false, GLASS);
   car.mirrored([[2.95, 4.6], [2.7, 4.9], [1.5, 4.95], [1.05, 4.5]], false, 0.45); // rain gutter
-  car.path([[2.78, 4.3, 1], [2.78, 4.3, -1], [2.42, 4.95, -1], [2.42, 4.95, 1]], true);
-  car.path([[1.45, 5.1, 1], [1.45, 5.1, -1], [0.82, 5.25, -1], [0.82, 5.25, 1]], true);
+  car.path([[2.78, 4.3, 1], [2.78, 4.3, -1], [2.42, 4.95, -1], [2.42, 4.95, 1]], true, GLASS);
+  car.path([[1.45, 5.1, 1], [1.45, 5.1, -1], [0.82, 5.25, -1], [0.82, 5.25, 1]], true, GLASS);
 
   // Doors, front boot lid and engine lid.
   car.mirrored([[2.82, 1.1], [2.82, 3.9]], false, 0.6);
@@ -269,37 +282,57 @@ export function porsche930() {
 
   // Round headlamps set into the tops of the wings, plus indicators in the valance.
   for (const side of [-1, 1] as Side[]) {
-    const p = car.surf(4.02, 3.9, side, 0.02);
-    car.lamp([p[0] + 0.03, p[1] + 0.01, p[2] * 0.93], 0.1, 1, 0.3);
-    car.lamp([p[0] + 0.035, p[1] + 0.01, p[2] * 0.93], 0.065, 0.7, 0.3);
+    const p = car.surf(4.1, 3.6, side, 0.02);
+    const lampZ = side * 0.58;
+    car.lamp([p[0] + 0.02, 0.6, lampZ], 0.095, HEADLAMP, 0.35);
+    car.lamp([p[0] + 0.03, 0.6, lampZ], 0.06, HEADLAMP, 0.35);
+    // Chrome ring where the lamp bowl meets the wing.
+    car.lamp([p[0] - 0.02, 0.605, lampZ], 0.112, 0.6, 0.35);
     car.lb.polyline(
       [[4.29, 0.4, side * 0.4], [4.29, 0.4, side * 0.6], [4.26, 0.45, side * 0.6], [4.26, 0.45, side * 0.4]],
       true,
-      0.9,
+      AMBER,
     );
     // Door mirror.
     const m = car.surf(2.66, 4.2, side, 0.01);
     car.lb.polyline([m, [m[0] - 0.05, m[1] + 0.07, side * 1.0], [m[0] - 0.17, m[1] + 0.06, side * 1.0], [m[0] - 0.12, m[1] - 0.01, m[2]]], true, 0.9);
   }
+  // Side script stripe along the doors, like the "PORSCHE" lettering in the photo.
+  const SCRIPT: V3 = [0.3, 0.78, 0.68];
+  car.mirrored([[2.62, 1.95], [1.92, 1.95]], false, SCRIPT);
+  car.mirrored([[2.62, 2.15], [1.92, 2.15]], false, SCRIPT);
+  for (let i = 0; i <= 7; i++) {
+    const x = 2.58 - i * 0.087;
+    car.mirrored([[x, 1.95], [x - 0.02, 2.15]], false, SCRIPT);
+  }
+
   // Front bumper with the bellows seam.
   car.lb.polyline([[4.33, 0.26, -0.7], [4.33, 0.26, 0.7], [4.33, 0.38, 0.7], [4.33, 0.38, -0.7]], true, 0.7);
 
-  // Whale tail: flat engine-lid wing with a raised rubber lip that overhangs the body.
-  const y = 1.02;
-  car.lb.polyline([[0.62, y - 0.05, -0.74], [0.62, y - 0.05, 0.74], [0.02, y, 0.84], [0.02, y, -0.84]], true);
-  car.lb.polyline([[-0.06, y + 0.09, -0.86], [-0.06, y + 0.09, 0.86]]);
-  for (const z of [-0.86, 0.86]) car.lb.line([-0.06, y + 0.09, z], [0.02, y, z * 0.98]);
+  // Whale tail: a flat tray sitting on the engine lid, closed by side plates,
+  // with a raised rubber lip along its trailing edge.
+  const front: [number, number] = [0.66, 0.99];
+  const rear: [number, number] = [0.0, 1.01];
+  const lip: [number, number] = [-0.07, 1.08];
+  car.lb.polyline([[front[0], front[1], -0.7], [front[0], front[1], 0.7], [rear[0], rear[1], 0.84], [rear[0], rear[1], -0.84]], true);
+  car.lb.polyline([[lip[0], lip[1], -0.86], [lip[0], lip[1], 0.86]]);
+  for (const side of [-1, 1]) {
+    car.lb.line([lip[0], lip[1], side * 0.86], [rear[0], rear[1], side * 0.84]);
+    // Side plate: from the tray edge down onto the body.
+    car.lb.polyline([[front[0], front[1], side * 0.7], [0.4, 0.9, side * 0.8], [0.04, 0.78, side * 0.84], [rear[0], rear[1], side * 0.84]], false, 0.9);
+  }
+  // Intercooler grille slats in the tray.
   for (let i = 1; i < 9; i++) {
     const z = -0.62 + (i / 9) * 1.24;
-    car.lb.line([0.14, y - 0.005, z], [0.52, y - 0.04, z], 0.55);
+    car.lb.line([0.56, 0.995, z], [0.1, 1.008, z], 0.55);
   }
-  for (const z of [-0.52, 0.52]) car.lb.polyline([[0.35, y - 0.03, z], [0.3, 0.86, z * 1.05]], false, 0.6);
 
   // Full-width tail-lamp bar with the reflector band, rear bumper and exhausts.
-  car.lb.polyline([[0.0, 0.58, -0.74], [0.0, 0.58, 0.74], [0.0, 0.7, 0.74], [0.0, 0.7, -0.74]], true);
-  car.lb.line([0.0, 0.64, -0.74], [0.0, 0.64, 0.74], 0.6);
+  car.lb.polyline([[0.0, 0.58, -0.74], [0.0, 0.58, 0.74], [0.0, 0.7, 0.74], [0.0, 0.7, -0.74]], true, TAIL_RED);
+  car.lb.line([0.0, 0.64, -0.74], [0.0, 0.64, 0.74], [0.7, 0.14, 0.12]);
+  for (const side of [-1, 1]) car.lb.line([0.0, 0.58, side * 0.5], [0.0, 0.7, side * 0.5], AMBER);
   car.lb.polyline([[-0.04, 0.28, -0.76], [-0.04, 0.28, 0.76], [-0.04, 0.42, 0.76], [-0.04, 0.42, -0.76]], true, 0.7);
-  for (const z of [-0.52, -0.4]) car.lb.ellipse([-0.06, 0.24, z], 0.045, 0.045, 'yz', 10, 0.8);
+  for (const z of [-0.52, -0.4]) car.lb.ellipse([-0.06, 0.24, z], 0.045, 0.045, 'yz', 10, TRIM);
 
   return car.build();
 }
@@ -323,33 +356,40 @@ export function astonVantage() {
       { x: 3.3, hw: 0.97, bottom: 0.24, belt: 0.74, crest: 0.06, roof: 0.8, roofHw: 0.56, crown: 0.06 },
       { x: 3.9, hw: 0.97, bottom: 0.24, belt: 0.7, crest: 0.06, roof: 0.72, roofHw: 0.54, crown: 0.05 },
       { x: 4.3, hw: 0.9, bottom: 0.22, belt: 0.6, crest: 0.04, roof: 0.6, roofHw: 0.5, crown: 0.03 },
-      { x: 4.5, hw: 0.74, bottom: 0.2, belt: 0.46, crest: 0.01, roof: 0.48, roofHw: 0.46, crown: 0.01 },
+      { x: 4.5, hw: 0.74, bottom: 0.2, belt: 0.42, crest: 0.01, roof: 0.44, roofHw: 0.46, crown: 0.01 },
     ],
     [
       { x: 0.86, r: 0.35, spokes: 5 },
       { x: 3.56, r: 0.35, spokes: 5 },
     ],
+    // Teal paint from the front photo.
+    [0.25, 0.82, 0.86],
   );
   car.loft();
   car.drawWheels();
 
   // Greenhouse: single sweeping side window, windscreen, rear glass.
-  car.mirrored([[2.78, 4.15], [2.3, 4.9], [1.65, 4.95], [1.05, 4.4], [1.2, 4.12]], true);
-  car.path([[2.8, 4.3, 1], [2.8, 4.3, -1], [2.3, 4.95, -1], [2.3, 4.95, 1]], true);
-  car.path([[1.55, 5.1, 1], [1.55, 5.1, -1], [0.55, 5.35, -1], [0.55, 5.35, 1]], true);
+  car.mirrored([[2.78, 4.15], [2.3, 4.9], [1.65, 4.95], [1.05, 4.4], [1.2, 4.12]], true, GLASS);
+  car.path([[2.8, 4.3, 1], [2.8, 4.3, -1], [2.3, 4.95, -1], [2.3, 4.95, 1]], true, GLASS);
+  car.path([[1.55, 5.1, 1], [1.55, 5.1, -1], [0.55, 5.35, -1], [0.55, 5.35, 1]], true, GLASS);
+
+  // Lime accents from the photo: side-sill stripe.
+  const LIME: V3 = [0.82, 1, 0.2];
+  car.mirrored([[3.18, 1.02], [1.24, 1.02]], false, LIME);
 
   // Bonnet vents and the side strakes behind the front wheels.
   for (const side of [-1, 1] as Side[]) {
     car.path([[3.2, 5.6, side], [3.55, 6.3, side]], false, 0.8);
     car.path([[3.15, 5.75, side], [3.5, 6.45, side]], false, 0.8);
-    car.path([[3.12, 2.4, side], [2.95, 3.4, side], [3.02, 3.5, side], [3.18, 2.5, side]], true, 0.9);
+    car.path([[3.12, 2.4, side], [2.95, 3.4, side], [3.02, 3.5, side], [3.18, 2.5, side]], true, TRIM);
     // Door line and mirror.
     car.path([[2.86, 1.2, side], [2.86, 3.9, side]], false, 0.6);
     const m = car.surf(2.64, 4.2, side, 0.01);
     car.lb.polyline([m, [m[0] - 0.04, m[1] + 0.08, side * 1.1], [m[0] - 0.18, m[1] + 0.07, side * 1.1], [m[0] - 0.13, m[1] - 0.01, m[2]]], true, 0.9);
     // Swept headlamps along the top of each wing.
-    car.path([[4.38, 3.3, side], [4.2, 3.95, side], [3.98, 4.15, side], [4.1, 3.7, side], [4.3, 3.2, side]], true);
-    car.path([[4.3, 3.45, side], [4.12, 3.85, side]], false, 0.7);
+    car.path([[4.47, 2.85, side], [4.3, 3.6, side], [4.04, 4.1, side], [4.14, 3.55, side], [4.4, 2.75, side]], true, HEADLAMP);
+    car.path([[4.4, 3.0, side], [4.18, 3.7, side]], false, HEADLAMP);
+    car.path([[4.36, 2.95, side], [4.14, 3.62, side]], false, [0.7, 0.72, 0.7]);
     // Rear haunch crease.
     car.path([[0.35, 3.2, side], [1.1, 3.3, side], [1.5, 3.9, side]], false, 0.7);
   }
@@ -360,25 +400,26 @@ export function astonVantage() {
   const gBot = 0.24;
   const topHw = 0.5;
   const botHw = 0.62;
-  car.lb.polyline([[gx, gBot, -botHw], [gx, gBot, botHw], [gx - 0.03, gTop, topHw], [gx - 0.03, gTop, -topHw]], true);
+  car.lb.polyline([[gx, gBot, -botHw], [gx, gBot, botHw], [gx - 0.03, gTop, topHw], [gx - 0.03, gTop, -topHw]], true, LIME);
+  car.lb.polyline([[gx + 0.01, gBot - 0.02, -botHw - 0.03], [gx + 0.01, gBot - 0.02, botHw + 0.03], [gx - 0.02, gTop + 0.02, topHw + 0.03], [gx - 0.02, gTop + 0.02, -topHw - 0.03]], true, LIME);
   const hwAt = (y: number) => botHw + (topHw - botHw) * ((y - gBot) / (gTop - gBot));
-  for (let i = -6; i <= 6; i++) {
+  for (let i = -9; i <= 9; i++) {
     for (const dir of [1, -1]) {
-      const z0 = (i / 6) * botHw;
+      const z0 = (i / 9) * botHw;
       const z1 = z0 + dir * (gTop - gBot) * 1.4;
       if (Math.abs(z1) > hwAt(gTop) || Math.abs(z0) > botHw) continue;
-      car.lb.line([gx, gBot, z0], [gx - 0.03, gTop, z1], 0.45);
+      car.lb.line([gx, gBot, z0], [gx - 0.03, gTop, z1], TRIM);
     }
   }
   // Splitter lip under the grille.
-  car.lb.polyline([[4.56, 0.2, -0.78], [4.56, 0.2, 0.78]], false, 0.9);
+  car.lb.polyline([[4.56, 0.2, -0.78], [4.56, 0.2, 0.78]], false, LIME);
 
   // Blade tail-lamp across the ducktail, diffuser fins and quad exhausts.
-  car.lb.polyline([[-0.02, 0.9, -0.84], [0.02, 0.88, 0], [-0.02, 0.9, 0.84]]);
+  car.lb.polyline([[-0.02, 0.9, -0.84], [0.02, 0.88, 0], [-0.02, 0.9, 0.84]], false, TAIL_RED);
   car.lb.polyline([[-0.03, 0.96, -0.72], [-0.03, 0.96, 0.72]], false, 0.8);
   car.lb.polyline([[-0.02, 0.36, -0.7], [-0.02, 0.36, 0.7]], false, 0.8);
-  for (let i = -3; i <= 3; i++) car.lb.line([-0.02, 0.36, i * 0.12], [-0.02, 0.22, i * 0.12], 0.6);
-  for (const z of [-0.5, -0.36, 0.36, 0.5]) car.lb.ellipse([-0.04, 0.29, z], 0.05, 0.05, 'yz', 12, 0.9);
+  for (let i = -3; i <= 3; i++) car.lb.line([-0.02, 0.36, i * 0.12], [-0.02, 0.22, i * 0.12], TRIM);
+  for (const z of [-0.5, -0.36, 0.36, 0.5]) car.lb.ellipse([-0.04, 0.29, z], 0.05, 0.05, 'yz', 12, TRIM);
   car.lb.polyline([[-0.01, 0.46, -0.26], [-0.01, 0.46, 0.26], [-0.01, 0.6, 0.26], [-0.01, 0.6, -0.26]], true, 0.5);
 
   return car.build();
