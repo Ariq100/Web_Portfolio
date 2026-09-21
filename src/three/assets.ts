@@ -49,7 +49,7 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'sculpting jiji',
+    label: 'sculpting cat.png → wireframe',
     run: async () => {
       await nextFrame();
       assets.cat = cat();

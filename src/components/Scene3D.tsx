@@ -38,7 +38,7 @@ const PLACEMENTS: Placement[] = [
   { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.64, y: 0.02, size: 0.7, opacity: 1, motion: 'portrait' },
   { asset: 'lelouch', section: 'about', color: MAGENTA, x: 0.64, y: 0, size: 0.66, opacity: 0.8, motion: 'relief' },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
-  { asset: 'cat', section: 'projects', color: WHITE, x: 0.76, y: 0.1, z: -1, size: 0.4, opacity: 0.8, motion: 'sway', rotation: [0.08, -0.3, 0] },
+  { asset: 'cat', section: 'projects', color: WHITE, x: 0.79, y: 0.08, z: -1, size: 0.3, opacity: 0.8, motion: 'sway', rotation: [0.05, -0.15, 0] },
   // y is downward: the Porsche sits above the Aston in the right-hand column.
   { asset: 'porsche', section: 'contact', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0] },
   { asset: 'aston', section: 'contact', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0] },
