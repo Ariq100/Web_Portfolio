@@ -34,7 +34,7 @@ function loadImage(url: string) {
 }
 
 /** Separable box blur using running sums. */
-function boxBlur(src: Float32Array, w: number, h: number, r: number) {
+export function boxBlur(src: Float32Array, w: number, h: number, r: number) {
   if (r < 1) return src.slice();
   const tmp = new Float32Array(src.length);
   const out = new Float32Array(src.length);
@@ -177,6 +177,15 @@ export async function imageWireframe(url: string, o: ImageWireframeOptions) {
   for (let i = 0; i < maskF.length; i++) maskF[i] = raw[i];
   const body = boxBlur(boxBlur(maskF, w, h, Math.round(w * 0.05)), w, h, Math.round(w * 0.05));
   const lumS = boxBlur(lum, w, h, 1);
+  // Stretch brightness across the subject so dark photos still give visible, varied lines.
+  const subjectLum: number[] = [];
+  for (let i = 0; i < lumS.length; i++) if (raw[i]) subjectLum.push(lumS[i]);
+  subjectLum.sort((a, b) => a - b);
+  const lumLo = subjectLum[Math.floor(subjectLum.length * 0.02)] ?? 0;
+  const lumHi = subjectLum[Math.floor(subjectLum.length * 0.98)] ?? 1;
+  if (lumHi - lumLo > 0.05) {
+    for (let i = 0; i < lumS.length; i++) lumS[i] = Math.min(1, Math.max(0, (lumS[i] - lumLo) / (lumHi - lumLo)));
+  }
 
   // Bounding box of the subject.
   let minX = w, minY = h, maxX = 0, maxY = 0;

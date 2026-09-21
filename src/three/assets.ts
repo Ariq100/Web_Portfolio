@@ -1,6 +1,8 @@
 import type * as THREE from 'three';
 import { imageWireframe } from './imageWireframe';
-import { astonVanquish, cat, porsche930, soccerBall } from './models';
+import { photoPoints } from './photoPoints';
+import { cat, soccerBall } from './models';
+import { astonVantage, porsche930 } from './cars';
 
 export type AssetName = 'me' | 'lelouch' | 'ball' | 'cat' | 'porsche' | 'aston';
 
@@ -16,15 +18,9 @@ const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 
 export const assetTasks: AssetTask[] = [
   {
-    label: 'tracing Home_me.png → wireframe',
+    label: 'sampling home_me.png → particles',
     run: async () => {
-      assets.me = await imageWireframe('/images/home_me.png', {
-        mask: 'alpha',
-        cols: 58,
-        relief: 0.06,
-        bulge: 0.12,
-        detail: 0.14,
-      });
+      assets.me = await photoPoints('/images/home_me.png', { width: 150, relief: 0.04, bulge: 0.16 });
     },
   },
   {
@@ -67,10 +63,10 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'lofting aston martin vanquish',
+    label: 'lofting aston martin vantage',
     run: async () => {
       await nextFrame();
-      assets.aston = astonVanquish();
+      assets.aston = astonVantage();
     },
   },
 ];

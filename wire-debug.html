@@ -1,0 +1,13 @@
+<!doctype html><html><body style="margin:0;background:#1e1e1e"><div id="r"></div>
+<script type="module">
+import * as THREE from 'three';
+import { porsche930, astonVantage } from '/src/three/cars.ts';
+const q = new URLSearchParams(location.search);
+const geo = q.get('m') === 'aston' ? astonVantage() : porsche930();
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.setClearColor('#1e1e1e');
+document.getElementById('r').appendChild(r.domElement);
+const scene = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 100); cam.position.set(0, 0, 2.4);
+const m = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: q.get('m') === 'aston' ? '#64d2ff' : '#ff453a', vertexColors: true }));
+m.rotation.order = 'YXZ'; m.rotation.set(Number(q.get('rx') || 0), Number(q.get('ry') || 0), 0);
+scene.add(m); r.render(scene, cam); document.body.dataset.done = '1';
+</script></body></html>
