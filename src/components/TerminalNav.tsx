@@ -72,28 +72,11 @@ export function TerminalNav({ sections, visible }: Props) {
   return (
     <header className={`titlebar-wrap${visible ? ' is-visible' : ''}`} aria-hidden={!visible} inert={!visible}>
       <div className="titlebar">
-        <div className="lights">
-          <button
-            className="light red"
-            aria-label="Back to top"
-            title="close → back to top"
-            onClick={() => go(sections[0])}
-          />
-          <button
-            className="light yellow"
-            aria-label="Jump to contact"
-            title="minimise → contact"
-            onClick={() => go(sections[sections.length - 1])}
-          />
-          <button
-            className="light green"
-            aria-label="Toggle fullscreen"
-            title="zoom → fullscreen"
-            onClick={() => {
-              if (document.fullscreenElement) document.exitFullscreen();
-              else document.documentElement.requestFullscreen?.();
-            }}
-          />
+        {/* Decorative only, like a screenshot of a terminal window. */}
+        <div className="lights" aria-hidden="true">
+          <span className="light red" />
+          <span className="light yellow" />
+          <span className="light green" />
         </div>
         <div className="title" aria-live="polite">
           <span className="title-icon" aria-hidden="true">

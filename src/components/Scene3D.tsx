@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { motion } from '../motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { assets, type AssetName } from '../three/assets';
-import { createPhotoMaterial } from '../three/photoPoints';
+import { createPhotoMaterial, createPhotoPlane } from '../three/photoPoints';
 
 const CAMERA_Z = 8;
 const FOV = 50;
@@ -34,7 +34,7 @@ interface Placement {
 }
 
 const PLACEMENTS: Placement[] = [
-  { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.64, y: 0.02, size: 0.7, opacity: 1, motion: 'portrait' },
+  { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.52, y: 0.04, size: 0.62, opacity: 1, motion: 'portrait' },
   { asset: 'sword', section: 'about', color: WHITE, x: 0.64, y: 0, size: 0.7, opacity: 0.85, motion: 'blade', rotation: [0, 0, -0.18] },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
   { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0] },
@@ -62,6 +62,7 @@ function Anchored({ p }: { p: Placement }) {
     () => (p.kind === 'photo' && geometry ? createPhotoMaterial(geometry) : null),
     [p.kind, geometry],
   );
+  const photoPlane = useMemo(() => (p.kind === 'photo' && geometry ? createPhotoPlane(geometry) : null), [p.kind, geometry]);
   const pointer = useMemo(
     () => ({ ray: new THREE.Raycaster(), ndc: new THREE.Vector2(), plane: new THREE.Plane(), hit: new THREE.Vector3(), normal: new THREE.Vector3() }),
     [],
@@ -95,7 +96,8 @@ function Anchored({ p }: { p: Placement }) {
     const r = inner.current.rotation;
     switch (p.motion) {
       case 'portrait':
-        r.set(rx + motion.my * 0.1, ry + Math.sin(t * 0.3) * 0.12 + motion.mx * 0.3, rz);
+        // Static: the photo never turns with the cursor.
+        r.set(rx, ry, rz);
         break;
       case 'blade':
         // Stands tilted, slowly turning so the slab of the blade catches the eye.
@@ -122,16 +124,22 @@ function Anchored({ p }: { p: Placement }) {
     g.visible = opacity.current > 0.01;
     if (lineMaterial.current) lineMaterial.current.opacity = opacity.current;
 
-    if (photoMaterial) {
+    if (photoMaterial && photoPlane) {
       const u = photoMaterial.uniforms;
+      const pu = photoPlane.material.uniforms;
       // Fly together on load; blow apart into dust as the section scrolls away.
       assembled.current = reduced ? 1 : Math.min(1, assembled.current + delta / ASSEMBLE_SECONDS);
-      u.uProgress.value = Math.min(assembled.current, 0.25 + 0.75 * presence);
+      const progress = Math.min(assembled.current, 0.25 + 0.75 * presence);
+      // Hand over from tiles to the sharp photo as the last tiles land.
+      const sharp = THREE.MathUtils.smoothstep(progress, 0.9, 1);
+      u.uProgress.value = progress;
       u.uTime.value = t;
-      u.uOpacity.value = opacity.current;
+      u.uOpacity.value = opacity.current * (1 - sharp);
       u.uResY.value = size.height * gl.getPixelRatio();
+      pu.uOpacity.value = opacity.current * sharp;
 
       // Project the cursor onto the portrait's plane, in its local space.
+      let over = false;
       if (motion.x >= 0) {
         pointer.ndc.set((motion.x / size.width) * 2 - 1, -(motion.y / size.height) * 2 + 1);
         pointer.ray.setFromCamera(pointer.ndc, camera);
@@ -139,9 +147,15 @@ function Anchored({ p }: { p: Placement }) {
         pointer.plane.setFromNormalAndCoplanarPoint(pointer.normal, g.getWorldPosition(pointer.hit));
         if (pointer.ray.ray.intersectPlane(pointer.plane, pointer.hit)) {
           inner.current.worldToLocal(pointer.hit);
-          (u.uMouse.value as THREE.Vector3).lerp(pointer.hit, 0.35);
+          // Exactly under the cursor, no easing.
+          (u.uMouse.value as THREE.Vector3).copy(pointer.hit);
+          (pu.uMouse.value as THREE.Vector3).copy(pointer.hit);
+          over = photoPlane.contains(pointer.hit);
         }
       }
+      // The gap opens while hovering the photo and closes when the cursor leaves.
+      const hole = reduced ? (over ? 1 : 0) : pu.uHole.value + ((over ? 1 : 0) - pu.uHole.value) * 0.2;
+      pu.uHole.value = hole;
     }
   });
 
@@ -149,8 +163,11 @@ function Anchored({ p }: { p: Placement }) {
   return (
     <group ref={group}>
       <group ref={inner}>
-        {photoMaterial ? (
-          <points geometry={geometry} material={photoMaterial} />
+        {photoMaterial && photoPlane ? (
+          <>
+            <points geometry={geometry} material={photoMaterial} />
+            <mesh geometry={photoPlane.geometry} material={photoPlane.material} />
+          </>
         ) : (
           <lineSegments geometry={geometry}>
             <lineBasicMaterial ref={lineMaterial} color={baseColor} vertexColors transparent opacity={0} depthWrite={false} />
@@ -199,16 +216,6 @@ function BitField({ count = 900 }: { count?: number }) {
   );
 }
 
-function CameraRig() {
-  const { camera } = useThree();
-  useFrame(() => {
-    camera.position.x += (motion.mx * 0.5 - camera.position.x) * 0.05;
-    camera.position.y += (-motion.my * 0.3 - camera.position.y) * 0.05;
-    camera.lookAt(0, 0, 0);
-  });
-  return null;
-}
-
 export function Scene3D() {
   const reduced = useReducedMotion();
   return (
@@ -219,7 +226,6 @@ export function Scene3D() {
         camera={{ position: [0, 0, CAMERA_Z], fov: FOV }}
         frameloop={reduced ? 'demand' : 'always'}
       >
-        <CameraRig />
         <BitField />
         {PLACEMENTS.map((p) => (
           <Anchored key={p.asset} p={p} />

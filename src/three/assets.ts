@@ -28,9 +28,9 @@ const STEEL = {
 
 export const assetTasks: AssetTask[] = [
   {
-    label: 'sampling home_me.png → particles',
+    label: 'loading home_me photo',
     run: async () => {
-      assets.me = await photoPoints('/images/home_me.png', { width: 150, relief: 0.04, bulge: 0.16 });
+      assets.me = await photoPoints('/images/home_me_web.webp', { width: 150 });
     },
   },
   {

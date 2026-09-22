@@ -1,48 +1,21 @@
 import * as THREE from 'three';
 
-/** Separable box blur using running sums. */
-function boxBlur(src: Float32Array, w: number, h: number, r: number) {
-  if (r < 1) return src.slice();
-  const tmp = new Float32Array(src.length);
-  const out = new Float32Array(src.length);
-  for (let y = 0; y < h; y++) {
-    let sum = 0;
-    for (let x = -r; x <= r; x++) sum += src[y * w + Math.min(w - 1, Math.max(0, x))];
-    for (let x = 0; x < w; x++) {
-      tmp[y * w + x] = sum / (2 * r + 1);
-      sum += src[y * w + Math.min(w - 1, x + r + 1)] - src[y * w + Math.max(0, x - r)];
-    }
-  }
-  for (let x = 0; x < w; x++) {
-    let sum = 0;
-    for (let y = -r; y <= r; y++) sum += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
-    for (let y = 0; y < h; y++) {
-      out[y * w + x] = sum / (2 * r + 1);
-      sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
-    }
-  }
-  return out;
-}
-
 export interface PhotoPointsOptions {
   /** Width of the particle grid; one particle per opaque cell. */
   width?: number;
-  /** Depth from brightness, as a fraction of the subject's height. */
-  relief?: number;
-  /** Depth from the silhouette, giving the body a rounded front. */
-  bulge?: number;
-  /** Multiplier on the (levels-stretched) photo colours. */
-  brighten?: number;
 }
 
 /** How much larger than the grid spacing each tile is, so neighbours overlap into a solid image. */
 const TILE = 2.2;
 
 /**
- * Splits a transparent PNG into a grid of particles. Each particle is drawn as a square
- * tile textured with its own patch of the photo, so when assembled they form the full,
- * solid image. The shader uses per-particle scatter offsets and seeds to assemble,
- * disperse and ripple under the cursor.
+ * Builds the home portrait from a transparent PNG/WebP.
+ *
+ * Two pieces share one full-resolution texture:
+ *  - a grid of particles, each a square tile showing its own patch of the photo, used
+ *    only while the portrait flies together on load and scatters on scroll;
+ *  - a flat image plane that shows the photo exactly as supplied (smooth edges, true
+ *    colours) once the tiles have landed. The cursor cuts a gap in this plane.
  */
 export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
   const img = new Image();
@@ -59,22 +32,7 @@ export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
   const { data } = ctx.getImageData(0, 0, w, h);
 
   const alpha = new Float32Array(w * h);
-  const lum = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    alpha[i] = data[i * 4 + 3] / 255;
-    lum[i] = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255;
-  }
-
-  // Levels: stretch the subject's own brightness range so a dark photo still reads.
-  const inside: number[] = [];
-  for (let i = 0; i < lum.length; i++) if (alpha[i] > 0.5) inside.push(lum[i]);
-  inside.sort((a, b) => a - b);
-  const lo = inside[Math.floor(inside.length * 0.01)] ?? 0;
-  const hi = inside[Math.floor(inside.length * 0.99)] ?? 1;
-
-  // Rounded body: a heavily blurred silhouette pushes the middle forward.
-  const body = boxBlur(boxBlur(alpha, w, h, Math.round(w * 0.06)), w, h, Math.round(w * 0.06));
-  const lumS = boxBlur(lum, w, h, 1);
+  for (let i = 0; i < w * h; i++) alpha[i] = data[i * 4 + 3] / 255;
 
   let minX = w, minY = h, maxX = 0, maxY = 0;
   for (let y = 0; y < h; y++) {
@@ -87,10 +45,6 @@ export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
   const span = Math.max(maxX - minX, maxY - minY);
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
-  const subjectH = (maxY - minY) / span;
-  const relief = (o.relief ?? 0.04) * subjectH;
-  const bulge = (o.bulge ?? 0.14) * subjectH;
-
   const positions: number[] = [];
   const uvs: number[] = [];
   const scatter: number[] = [];
@@ -104,7 +58,7 @@ export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
 
       const px = (x + 0.5 - cx) / span;
       const py = -(y + 0.5 - cy) / span;
-      positions.push(px, py, body[i] * bulge + (lumS[i] - 0.5) * relief);
+      positions.push(px, py, 0);
       uvs.push((x + 0.5) / w, 1 - (y + 0.5) / h);
 
       // Scatter: a burst outward and toward the camera, like shards blown off the photo.
@@ -116,10 +70,14 @@ export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
   }
 
   const texture = new THREE.Texture(img);
-  // Sampled as-is: the shader outputs the photo's own sRGB values.
+  // Sampled as-is: the shaders output the photo's own sRGB values.
   texture.colorSpace = THREE.NoColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.generateMipmaps = false;
+  // Premultiplied alpha + mipmaps keep the cut-out edge smooth at any display size.
+  texture.premultiplyAlpha = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  texture.anisotropy = 4;
   texture.needsUpdate = true;
 
   const g = new THREE.BufferGeometry();
@@ -134,7 +92,8 @@ export async function photoPoints(url: string, o: PhotoPointsOptions = {}) {
     pitch: 1 / span,
     /** UV size of one tile. */
     tileUv: [TILE / w, TILE / h],
-    levels: [lo, Math.max(0.05, hi - lo), o.brighten ?? 1.0],
+    /** The full image as a plane in the same local units as the tiles. */
+    plane: { width: w / span, height: h / span, x: (w / 2 - cx) / span, y: -(h / 2 - cy) / span },
   };
   return g;
 }
@@ -188,7 +147,6 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform sampler2D uMap;
   uniform vec2 uTileUv;
-  uniform vec3 uLevels; // low, range, brighten
   uniform float uOpacity;
   varying vec2 vUv;
   varying float vGrow;
@@ -197,36 +155,62 @@ const fragmentShader = /* glsl */ `
   void main() {
     // Map this fragment of the square tile onto its patch of the photo.
     vec2 offset = vec2(gl_PointCoord.x - 0.5, 0.5 - gl_PointCoord.y) * uTileUv * vGrow;
-    vec4 tex = texture2D(uMap, vUv + offset);
-    // The cutout's soft fringe still carries the old background; keep only the solid part.
-    if (tex.a < 0.8) discard;
-
-    vec3 c = tex.rgb;
-    // Despill: where green dominates (grass showing through hair), pull it to neutral.
-    float spill = max(0.0, c.g - max(c.r, c.b));
-    c.g -= spill;
-    c.g = mix(c.g, (c.r + c.b) * 0.5, step(0.001, spill) * 0.6);
-    // Darken what is left of the edge so it blends into hair and shoulders.
-    c *= mix(0.55, 1.0, smoothstep(0.8, 1.0, tex.a));
-    c = clamp((c - uLevels.x) / uLevels.y, 0.0, 1.0);
-    c = pow(c, vec3(0.9)) * uLevels.z;
-
-    gl_FragColor = vec4(c, uOpacity * (0.4 + 0.6 * vAssembled));
+    vec4 tex = texture2D(uMap, vUv + offset); // premultiplied
+    float a = tex.a * uOpacity * (0.4 + 0.6 * vAssembled);
+    if (a < 0.003) discard;
+    gl_FragColor = vec4(tex.rgb * uOpacity * (0.4 + 0.6 * vAssembled), a);
   }
 `;
 
+const planeVertexShader = /* glsl */ `
+  varying vec2 vUv;
+  varying vec2 vPos;
+  void main() {
+    vUv = uv;
+    vPos = position.xy;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const planeFragmentShader = /* glsl */ `
+  uniform sampler2D uMap;
+  uniform float uOpacity;
+  uniform vec3 uMouse;
+  uniform float uHole;   // 0 closed … 1 fully open
+  uniform float uRadius; // gap radius in local units
+  varying vec2 vUv;
+  varying vec2 vPos;
+
+  void main() {
+    vec4 tex = texture2D(uMap, vUv); // premultiplied
+    // Gap centred exactly under the cursor, with a soft, slightly darkened lip.
+    float r = uRadius * uHole;
+    float d = length(vPos - uMouse.xy);
+    float soft = 0.006 + 0.004 * uHole;
+    float keep = smoothstep(r, r + soft, d);
+    float lip = 1.0 - 0.35 * uHole * (1.0 - smoothstep(r, r + soft * 4.0, d));
+    // The photo is cropped flat at the bottom; fade that edge into the background.
+    float fade = smoothstep(0.0, 0.14, vUv.y);
+    keep *= fade;
+    float a = tex.a * keep * uOpacity;
+    if (a < 0.002) discard;
+    gl_FragColor = vec4(tex.rgb * keep * lip * uOpacity, a);
+  }
+`;
+
+interface PhotoData {
+  texture: THREE.Texture;
+  pitch: number;
+  tileUv: [number, number];
+  plane: { width: number; height: number; x: number; y: number };
+}
+
 export function createPhotoMaterial(geometry: THREE.BufferGeometry) {
-  const { texture, pitch, tileUv, levels } = geometry.userData as {
-    texture: THREE.Texture;
-    pitch: number;
-    tileUv: [number, number];
-    levels: [number, number, number];
-  };
+  const { texture, pitch, tileUv } = geometry.userData as PhotoData;
   return new THREE.ShaderMaterial({
     uniforms: {
       uMap: { value: texture },
       uTileUv: { value: new THREE.Vector2(...tileUv) },
-      uLevels: { value: new THREE.Vector3(...levels) },
       uProgress: { value: 0 },
       uTime: { value: 0 },
       uOpacity: { value: 0 },
@@ -239,6 +223,36 @@ export function createPhotoMaterial(geometry: THREE.BufferGeometry) {
     vertexShader,
     fragmentShader,
     transparent: true,
-    depthWrite: true,
+    premultipliedAlpha: true,
+    depthWrite: false,
   });
+}
+
+/** The sharp, full-resolution photo shown once the tiles have assembled. */
+export function createPhotoPlane(geometry: THREE.BufferGeometry) {
+  const { texture, plane } = geometry.userData as PhotoData;
+  const planeGeometry = new THREE.PlaneGeometry(plane.width, plane.height);
+  planeGeometry.translate(plane.x, plane.y, 0);
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap: { value: texture },
+      uOpacity: { value: 0 },
+      uMouse: { value: new THREE.Vector3(99, 99, 0) },
+      uHole: { value: 0 },
+      uRadius: { value: 0.07 },
+    },
+    vertexShader: planeVertexShader,
+    fragmentShader: planeFragmentShader,
+    transparent: true,
+    premultipliedAlpha: true,
+    depthWrite: false,
+  });
+  const halfW = plane.width / 2;
+  const halfH = plane.height / 2;
+  return {
+    geometry: planeGeometry,
+    material,
+    /** Is a local-space point over the image's rectangle? */
+    contains: (p: THREE.Vector3) => Math.abs(p.x - plane.x) <= halfW && Math.abs(p.y - plane.y) <= halfH,
+  };
 }
