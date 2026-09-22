@@ -31,18 +31,26 @@ export function Projects() {
                     ↗ open
                   </span>
                 </a>
+                <span className="project-when c-dim">{p.when}</span>
               </div>
               <p className="project-desc">
                 <span className="c-dim">└─ </span>
                 {p.description}
               </p>
-              <p className="project-stack">
-                {p.stack.map((s) => (
-                  <span className="chip" key={s}>
-                    {s}
-                  </span>
-                ))}
-              </p>
+              {p.stack?.length || p.links?.length ? (
+                <p className="project-stack">
+                  {p.stack?.map((s) => (
+                    <span className="chip" key={s}>
+                      {s}
+                    </span>
+                  ))}
+                  {p.links?.map((l) => (
+                    <a className="project-link" key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
+                      ↗ {l.label}
+                    </a>
+                  ))}
+                </p>
+              ) : null}
             </article>
           )),
         ],

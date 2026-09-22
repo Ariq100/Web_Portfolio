@@ -29,6 +29,12 @@ interface TearPoint {
 
 type Tear = TearPoint[];
 
+/**
+ * The tear canvas, shared so the home photo can be torn with exactly the same holes:
+ * its alpha is 0 where the screen is ripped. `version` bumps whenever it is repainted.
+ */
+export const tearSurface = { canvas: null as HTMLCanvasElement | null, version: 0 };
+
 export function TearCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
@@ -36,6 +42,7 @@ export function TearCanvas() {
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
+    tearSurface.canvas = canvas;
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -54,6 +61,7 @@ export function TearCanvas() {
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       paintBackground();
+      tearSurface.version++;
     };
     resize();
     window.addEventListener('resize', resize);
@@ -174,6 +182,8 @@ export function TearCanvas() {
       }
 
       paintBackground();
+      // Bumped before drawing: the photo re-uploads on its next frame, after this one finishes.
+      tearSurface.version++;
 
       if (tears.length === 0) return;
 

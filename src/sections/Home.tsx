@@ -17,7 +17,9 @@ export function Home() {
           <p className="role">
             <span className="c-dim">// </span>
             {profile.role}
-            <span className="c-dim"> · </span>
+          </p>,
+          <p className="role">
+            <span className="c-dim">// </span>
             {profile.location}
           </p>,
         ],
@@ -26,7 +28,9 @@ export function Home() {
         cwd: '~',
         command: 'cat fun-facts.txt',
         output: [
-          <span className="c-dim"># 5 fun facts about me</span>,
+          <span className="c-dim">
+            # {profile.funFacts.length} fun facts about me
+          </span>,
           ...profile.funFacts.map((fact, i) => (
             <p className="fact">
               <span className="fact-num">{String(i + 1).padStart(2, '0')}</span>

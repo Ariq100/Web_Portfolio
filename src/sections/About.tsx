@@ -34,6 +34,33 @@ export function About() {
             {profile.about.summary}
           </p>,
           <span />,
+          <span className="c-yellow">EXPERIENCE</span>,
+          ...profile.about.experience.map((e) => (
+            <div className="exp">
+              <p>
+                <span className="c-text exp-role">{e.role}</span>
+                <span className="c-dim"> · {e.when}</span>
+              </p>
+              <p className="c-dim">
+                {e.org}, {e.where}
+              </p>
+              {e.points.map((pt) => (
+                <p className="exp-point" key={pt}>
+                  <span className="c-dim">– </span>
+                  {pt}
+                </p>
+              ))}
+            </div>
+          )),
+          <span />,
+          <span className="c-yellow">AT MONASH</span>,
+          ...profile.about.involvement.map((item) => (
+            <p className="exp-point">
+              <span className="c-green">✔ </span>
+              {item}
+            </p>
+          )),
+          <span />,
           <p className="skills">
             <span className="c-dim">skills: </span>
             {profile.about.skills.map((s) => (

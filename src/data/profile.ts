@@ -1,13 +1,17 @@
 /**
  * All personal content lives here. Edit this file to update the site.
- * Anything wrapped in <angle brackets> is a placeholder to replace.
+ * Details come from Resume.pdf.
  */
 
 export interface Project {
   name: string;
+  /** Where clicking the project name goes. */
   url: string;
+  /** Extra links shown under the description, e.g. a Devpost page. */
+  links?: { label: string; href: string }[];
+  when: string;
   description: string;
-  stack: string[];
+  stack?: string[];
 }
 
 export interface ContactLink {
@@ -16,60 +20,109 @@ export interface ContactLink {
   href: string;
 }
 
+export interface Experience {
+  role: string;
+  org: string;
+  where: string;
+  when: string;
+  points: string[];
+}
+
 export const profile = {
   /** Shown as the site title, hero heading and terminal username. */
   name: 'Ariq',
+  fullName: 'Shadman Muhtasim Ariq',
   /** Lowercase handle used in the shell prompt, e.g. ariq@portfolio. */
   handle: 'ariq',
-  role: 'Software Developer',
-  location: '<Your City, Country>',
+  /** Home screen lines under the name. */
+  role: 'Computer Science, Monash University',
+  location: 'Melbourne, Victoria',
 
-  funFacts: [
-    '<Fun fact #1 — e.g. I wrote my first program at 12 to cheat at a browser game>',
-    '<Fun fact #2 — e.g. I have visited 14 countries>',
-    '<Fun fact #3 — e.g. I can solve a Rubik’s cube in under a minute>',
-    '<Fun fact #4 — e.g. My coffee order is embarrassingly long>',
-    '<Fun fact #5 — e.g. I prefer tabs, but I will not fight you about it>',
-  ],
+  funFacts: ['Jack of all trades, master of none', 'I always have more than 15 tabs open', 'Bob the Builder'],
 
   about: {
     summary:
-      '<A few sentences about who you are, what you build and what you care about. Keep it friendly and specific.>',
+      "Self-taught developer who picked up Python, C++, Java and JavaScript on my own, then moved into React and full-stack web development. I recently taught myself TypeScript in a single hackathon night to keep up with a new team's stack, and I'm currently building an iOS app with Swift and Supabase, a language and framework I learned from scratch for the project. I'd rather learn a new tool mid-project than sit one out, and building things - fast, and often outside my comfort zone - is what keeps me in this field.",
     details: [
-      { key: 'name', value: 'Ariq' },
-      { key: 'role', value: 'Software Developer' },
-      { key: 'education', value: '<Degree, University>' },
-      { key: 'experience', value: '<N years building web apps>' },
-      { key: 'currently', value: '<What you are working on or learning>' },
-      { key: 'interests', value: '<Hobbies outside of code>' },
+      { key: 'name', value: 'Shadman Muhtasim Ariq' },
+      { key: 'studying', value: 'Bachelor of Computer Science' },
+      { key: 'specialisation', value: 'Algorithms and Software' },
+      { key: 'university', value: 'Monash University (Jan 2026 – present)' },
+      { key: 'based in', value: 'Melbourne, Victoria' },
+      { key: 'currently', value: 'Building an iOS app with Swift and Supabase' },
+      { key: 'before', value: 'A levels in Computer Science, Physics & Maths, SFX Greenherald International School (Certificate for Honors, straight A’s)' },
     ],
-    skills: ['TypeScript', 'React', 'Node.js', 'Three.js', '<Skill>', '<Skill>'],
+    involvement: [
+      'Projects Team member, MNET (Monash Nexus Emerging Tech)',
+      "Social Media Manager, gdgmonash (Google Developer's Club Monash)",
+      'Hackathon Finalist, MelbourneHack (hosted by the University of Melbourne)',
+    ],
+    experience: [
+      {
+        role: 'USG (Under Secretary General), Hospitality',
+        org: 'SFX Greenherald International School',
+        where: 'Dhaka, Bangladesh',
+        when: 'Jun 2025 – Jul 2025',
+        points: [
+          'Managed guests and attendees with a team.',
+          "Built a supportive team environment by addressing team members' needs and giving timely recognition, lifting morale and guest experience.",
+        ],
+      },
+      {
+        role: 'Intern, Graphic Design',
+        org: 'Holycity Developments Limited',
+        where: 'Dhaka, Bangladesh',
+        when: 'Jun 2024 – Aug 2024',
+        points: ['Created their physical portfolio showing the history of the company and all of their projects.'],
+      },
+    ] satisfies Experience[],
+    skills: [
+      'TypeScript',
+      'JavaScript',
+      'React',
+      'Next.js',
+      'Vite',
+      'FastAPI',
+      'Supabase',
+      'Python',
+      'C++',
+      'Java',
+      'Swift',
+      'HTML',
+      'CSS',
+      'pnpm',
+    ],
   },
 
   projects: [
     {
-      name: '<Project One>',
-      url: 'https://example.com',
-      description: '<One or two sentences on what this website does and who it is for.>',
-      stack: ['React', 'TypeScript'],
+      name: 'EaMoSleMo',
+      url: 'https://eamoslemo.vercel.app/',
+      links: [{ label: 'devpost', href: 'https://devpost.com/software/eamoslemo' }],
+      when: 'Apr 2026 – present',
+      description:
+        'A wellness helper app that tracks your sleep, exercise and nutrition, then recommends a full weekly meal plan that fits your goals and your grocery budget. Built with a team of strangers I met on the first day of the hackathon.',
     },
     {
-      name: '<Project Two>',
-      url: 'https://example.com',
-      description: '<One or two sentences on what this website does and who it is for.>',
-      stack: ['Node.js', 'PostgreSQL'],
+      name: 'Racle',
+      url: 'https://devpost.com/software/rackle',
+      when: 'Aug 2026',
+      description:
+        'A gamified AI receipt scanner that tracks food carbon footprints and maps nearby scrap vendors for instant recycling cash payouts.',
     },
     {
-      name: '<Project Three>',
-      url: 'https://example.com',
-      description: '<One or two sentences on what this website does and who it is for.>',
-      stack: ['Next.js', 'Tailwind'],
+      name: 'PEDDY',
+      url: 'https://github.com/Ariq100/Peddy',
+      when: 'Dec 2025',
+      description:
+        "A responsive pet adoption platform built for a Programming Hero assignment. Browse pets by category, view details and adopt, with dynamic data from Programming Hero's APIs.",
+      stack: ['HTML', 'Tailwind', 'DaisyUI', 'JavaScript'],
     },
   ] satisfies Project[],
 
   contact: [
-    { label: 'linkedin', value: 'linkedin.com/in/<username>', href: 'https://www.linkedin.com/in/<username>' },
-    { label: 'github', value: 'github.com/<username>', href: 'https://github.com/<username>' },
-    { label: 'email', value: '<you@example.com>', href: 'mailto:<you@example.com>' },
+    { label: 'linkedin', value: 'linkedin.com/in/shadman-ariq', href: 'https://www.linkedin.com/in/shadman-ariq/' },
+    { label: 'github', value: 'github.com/Ariq100', href: 'https://github.com/Ariq100' },
+    { label: 'email', value: '5002.ariq@gmail.com', href: 'mailto:5002.ariq@gmail.com' },
   ] satisfies ContactLink[],
 };

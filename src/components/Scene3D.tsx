@@ -5,6 +5,7 @@ import { motion } from '../motion';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { assets, type AssetName } from '../three/assets';
 import { createPhotoMaterial, createPhotoPlane } from '../three/photoPoints';
+import { tearSurface } from './TearCanvas';
 
 const CAMERA_Z = 8;
 const FOV = 50;
@@ -54,7 +55,7 @@ function Anchored({ p }: { p: Placement }) {
   const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
   const opacity = useRef(0);
   const assembled = useRef(0);
-  const { size, camera, gl } = useThree();
+  const { size, gl } = useThree();
   const reduced = useReducedMotion();
   const geometry = assets[p.asset];
   const baseColor = useMemo(() => new THREE.Color(p.color), [p.color]);
@@ -62,10 +63,18 @@ function Anchored({ p }: { p: Placement }) {
     () => (p.kind === 'photo' && geometry ? createPhotoMaterial(geometry) : null),
     [p.kind, geometry],
   );
-  const photoPlane = useMemo(() => (p.kind === 'photo' && geometry ? createPhotoPlane(geometry) : null), [p.kind, geometry]);
-  const pointer = useMemo(
-    () => ({ ray: new THREE.Raycaster(), ndc: new THREE.Vector2(), plane: new THREE.Plane(), hit: new THREE.Vector3(), normal: new THREE.Vector3() }),
-    [],
+  // The background tear canvas as a texture, so the photo rips in the same places.
+  const tear = useMemo(() => {
+    if (p.kind !== 'photo' || !tearSurface.canvas) return null;
+    const t = new THREE.CanvasTexture(tearSurface.canvas);
+    t.minFilter = THREE.LinearFilter;
+    t.generateMipmaps = false;
+    return t;
+  }, [p.kind]);
+  const tearVersion = useRef(-1);
+  const photoPlane = useMemo(
+    () => (p.kind === 'photo' && geometry && tear ? createPhotoPlane(geometry, tear) : null),
+    [p.kind, geometry, tear],
   );
 
   useFrame((state, delta) => {
@@ -138,24 +147,11 @@ function Anchored({ p }: { p: Placement }) {
       u.uResY.value = size.height * gl.getPixelRatio();
       pu.uOpacity.value = opacity.current * sharp;
 
-      // Project the cursor onto the portrait's plane, in its local space.
-      let over = false;
-      if (motion.x >= 0) {
-        pointer.ndc.set((motion.x / size.width) * 2 - 1, -(motion.y / size.height) * 2 + 1);
-        pointer.ray.setFromCamera(pointer.ndc, camera);
-        inner.current.getWorldDirection(pointer.normal);
-        pointer.plane.setFromNormalAndCoplanarPoint(pointer.normal, g.getWorldPosition(pointer.hit));
-        if (pointer.ray.ray.intersectPlane(pointer.plane, pointer.hit)) {
-          inner.current.worldToLocal(pointer.hit);
-          // Exactly under the cursor, no easing.
-          (u.uMouse.value as THREE.Vector3).copy(pointer.hit);
-          (pu.uMouse.value as THREE.Vector3).copy(pointer.hit);
-          over = photoPlane.contains(pointer.hit);
-        }
+      (pu.uViewport.value as THREE.Vector2).set(size.width * gl.getPixelRatio(), size.height * gl.getPixelRatio());
+      if (tear && tearVersion.current !== tearSurface.version) {
+        tearVersion.current = tearSurface.version;
+        tear.needsUpdate = true;
       }
-      // The gap opens while hovering the photo and closes when the cursor leaves.
-      const hole = reduced ? (over ? 1 : 0) : pu.uHole.value + ((over ? 1 : 0) - pu.uHole.value) * 0.2;
-      pu.uHole.value = hole;
     }
   });
 

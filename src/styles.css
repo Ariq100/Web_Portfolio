@@ -471,8 +471,14 @@ p {
 /* ---------- about ---------- */
 
 .kv {
+  display: flex;
   white-space: pre;
-  overflow-x: auto;
+}
+
+/* Long values wrap under themselves, keeping the key column aligned. */
+.kv > :last-child {
+  white-space: normal;
+  min-width: 0;
 }
 
 .summary {
@@ -557,6 +563,38 @@ p {
 .project-desc {
   margin: 4px 0 10px;
   color: var(--text);
+}
+
+.project-when {
+  margin-left: auto;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.project-link {
+  font-size: 12.5px;
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.project-link:hover {
+  text-decoration: underline;
+}
+
+.exp {
+  white-space: normal;
+  margin: 2px 0 8px;
+}
+
+.exp-role {
+  font-weight: 700;
+}
+
+.exp-point {
+  white-space: normal;
+  max-width: 76ch;
+  padding-left: 1.2ch;
+  text-indent: -1.2ch;
 }
 
 /* ---------- contact ---------- */

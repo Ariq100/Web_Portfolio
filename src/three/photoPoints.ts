@@ -103,9 +103,6 @@ const vertexShader = /* glsl */ `
   uniform float uTime;
   uniform float uSize;
   uniform float uResY;
-  uniform float uPush;
-  uniform float uRadius;
-  uniform vec3 uMouse;
   attribute vec2 aUv;
   attribute vec3 aScatter;
   attribute float aSeed;
@@ -119,14 +116,6 @@ const vertexShader = /* glsl */ `
     t = 1.0 - pow(1.0 - t, 3.0);
     vec3 p = mix(position + aScatter, position, t);
 
-    // Cursor pushes tiles aside and toward the viewer.
-    vec2 d = p.xy - uMouse.xy;
-    float dist = length(d);
-    float f = 1.0 - smoothstep(0.0, uRadius, dist);
-    f *= f;
-    p.xy += (d / max(dist, 1e-4)) * f * uPush;
-    p.z += f * uPush * 2.0;
-
     // Loose tiles drift; assembled ones hold still so the photo stays sharp.
     float loose = 1.0 - t;
     p.x += loose * 0.01 * sin(uTime * 1.3 + aSeed * 40.0);
@@ -135,7 +124,7 @@ const vertexShader = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     float worldScale = length(modelMatrix[0].xyz);
-    float grow = 1.0 + f * 0.25;
+    float grow = 1.0;
     gl_PointSize = uSize * grow * worldScale * projectionMatrix[1][1] * uResY * 0.5 / -mv.z;
 
     vUv = aUv;
@@ -164,31 +153,30 @@ const fragmentShader = /* glsl */ `
 
 const planeVertexShader = /* glsl */ `
   varying vec2 vUv;
-  varying vec2 vPos;
   void main() {
     vUv = uv;
-    vPos = position.xy;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 
 const planeFragmentShader = /* glsl */ `
   uniform sampler2D uMap;
+  uniform sampler2D uTear;  // the background tear canvas: alpha 0 where ripped
+  uniform vec2 uViewport;   // drawing-buffer size in px
   uniform float uOpacity;
-  uniform vec3 uMouse;
-  uniform float uHole;   // 0 closed … 1 fully open
-  uniform float uRadius; // gap radius in local units
   varying vec2 vUv;
-  varying vec2 vPos;
+
+  const float BG_LUMA = 0.118; // #1e1e1e, the untorn terminal background
 
   void main() {
     vec4 tex = texture2D(uMap, vUv); // premultiplied
-    // Gap centred exactly under the cursor, with a soft, slightly darkened lip.
-    float r = uRadius * uHole;
-    float d = length(vPos - uMouse.xy);
-    float soft = 0.006 + 0.004 * uHole;
-    float keep = smoothstep(r, r + soft, d);
-    float lip = 1.0 - 0.35 * uHole * (1.0 - smoothstep(r, r + soft * 4.0, d));
+    // Rip the photo exactly where the background is ripped.
+    vec4 tear = texture2D(uTear, gl_FragCoord.xy / uViewport);
+    float keep = smoothstep(0.05, 0.6, tear.a);
+    // The tear canvas darkens the surface around each rip (lifted-edge shadow);
+    // carry that shadow onto the photo.
+    float luma = dot(tear.rgb, vec3(0.2126, 0.7152, 0.0722));
+    float lip = clamp(luma / BG_LUMA, 0.3, 1.0);
     // The photo is cropped flat at the bottom; fade that edge into the background.
     float fade = smoothstep(0.0, 0.14, vUv.y);
     keep *= fade;
@@ -216,9 +204,6 @@ export function createPhotoMaterial(geometry: THREE.BufferGeometry) {
       uOpacity: { value: 0 },
       uSize: { value: pitch * TILE },
       uResY: { value: 800 },
-      uPush: { value: 0.035 },
-      uRadius: { value: 0.08 },
-      uMouse: { value: new THREE.Vector3(99, 99, 0) },
     },
     vertexShader,
     fragmentShader,
@@ -229,17 +214,16 @@ export function createPhotoMaterial(geometry: THREE.BufferGeometry) {
 }
 
 /** The sharp, full-resolution photo shown once the tiles have assembled. */
-export function createPhotoPlane(geometry: THREE.BufferGeometry) {
+export function createPhotoPlane(geometry: THREE.BufferGeometry, tear: THREE.Texture) {
   const { texture, plane } = geometry.userData as PhotoData;
   const planeGeometry = new THREE.PlaneGeometry(plane.width, plane.height);
   planeGeometry.translate(plane.x, plane.y, 0);
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uMap: { value: texture },
+      uTear: { value: tear },
+      uViewport: { value: new THREE.Vector2(1, 1) },
       uOpacity: { value: 0 },
-      uMouse: { value: new THREE.Vector3(99, 99, 0) },
-      uHole: { value: 0 },
-      uRadius: { value: 0.07 },
     },
     vertexShader: planeVertexShader,
     fragmentShader: planeFragmentShader,
@@ -247,12 +231,5 @@ export function createPhotoPlane(geometry: THREE.BufferGeometry) {
     premultipliedAlpha: true,
     depthWrite: false,
   });
-  const halfW = plane.width / 2;
-  const halfH = plane.height / 2;
-  return {
-    geometry: planeGeometry,
-    material,
-    /** Is a local-space point over the image's rectangle? */
-    contains: (p: THREE.Vector3) => Math.abs(p.x - plane.x) <= halfW && Math.abs(p.y - plane.y) <= halfH,
-  };
+  return { geometry: planeGeometry, material };
 }
