@@ -6,3 +6,5 @@ dist
 # Local-only notes (not for GitHub)
 conversation.txt
 DOCUMENTATION.md
+.vercel
+.env*

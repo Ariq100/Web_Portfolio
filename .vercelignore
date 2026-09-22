@@ -1,0 +1,7 @@
+# Never upload these to Vercel: large model sources and private/local-only files.
+model-sources/
+tools/
+Resume.pdf
+conversation.txt
+DOCUMENTATION.md
+node_modules/

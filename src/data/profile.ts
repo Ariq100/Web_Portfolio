@@ -60,16 +60,6 @@ export const profile = {
     ],
     experience: [
       {
-        role: 'USG (Under Secretary General), Hospitality',
-        org: 'SFX Greenherald International School',
-        where: 'Dhaka, Bangladesh',
-        when: 'Jun 2025 – Jul 2025',
-        points: [
-          'Managed guests and attendees with a team.',
-          "Built a supportive team environment by addressing team members' needs and giving timely recognition, lifting morale and guest experience.",
-        ],
-      },
-      {
         role: 'Intern, Graphic Design',
         org: 'Holycity Developments Limited',
         where: 'Dhaka, Bangladesh',
@@ -99,7 +89,10 @@ export const profile = {
     {
       name: 'EaMoSleMo',
       url: 'https://eamoslemo.vercel.app/',
-      links: [{ label: 'devpost', href: 'https://devpost.com/software/eamoslemo' }],
+      links: [
+        { label: 'website', href: 'https://eamoslemo.vercel.app/' },
+        { label: 'devpost', href: 'https://devpost.com/software/eamoslemo' },
+      ],
       when: 'Apr 2026 – present',
       description:
         'A wellness helper app that tracks your sleep, exercise and nutrition, then recommends a full weekly meal plan that fits your goals and your grocery budget. Built with a team of strangers I met on the first day of the hackathon.',
@@ -108,6 +101,7 @@ export const profile = {
       name: 'Racle',
       url: 'https://racle-one.vercel.app/',
       links: [
+        { label: 'website', href: 'https://racle-one.vercel.app/' },
         { label: 'github', href: 'https://github.com/Ariq100/Racle' },
         { label: 'devpost', href: 'https://devpost.com/software/rackle' },
       ],
@@ -118,13 +112,15 @@ export const profile = {
     {
       name: 'PEDDY',
       url: 'https://petad0pti0n.netlify.app/',
-      links: [{ label: 'github', href: 'https://github.com/Ariq100/Peddy' }],
+      links: [
+        { label: 'website', href: 'https://petad0pti0n.netlify.app/' },
+        { label: 'github', href: 'https://github.com/Ariq100/Peddy' },
+      ],
       when: 'Dec 2025',
       description:
         "A responsive pet adoption platform built for a Programming Hero assignment. Browse pets by category, view details and adopt, with dynamic data from Programming Hero's APIs.",
-      stack: ['HTML', 'Tailwind', 'DaisyUI', 'JavaScript'],
     },
-  ] satisfies Project[],
+  ] as Project[],
 
   contact: [
     { label: 'linkedin', value: 'linkedin.com/in/shadman-ariq', href: 'https://www.linkedin.com/in/shadman-ariq/' },
