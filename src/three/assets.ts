@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import { imageWireframe } from './imageWireframe';
 import { photoPoints } from './photoPoints';
 import { cat, football } from './models';
-import { lexusLFA, porsche930 } from './cars';
+import { loadWireModel } from './wireModel';
 
 export type AssetName = 'me' | 'lelouch' | 'ball' | 'cat' | 'porsche' | 'lfa';
 
@@ -56,17 +56,36 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'lofting porsche 930 turbo',
+    label: 'loading porsche 930 turbo model',
     run: async () => {
-      await nextFrame();
-      assets.porsche = porsche930();
+      assets.porsche = await loadWireModel('/models/porsche930.bin', {
+        body: [0.66, 0.68, 0.74],
+        glass: [0.5, 0.68, 0.86],
+        lamp: [1, 1, 0.94],
+        trim: [0.42, 0.45, 0.52],
+        wheel: [0.55, 0.57, 0.62],
+        amber: [1, 0.62, 0.1],
+        red: [1, 0.22, 0.18],
+        // The model's nose points to -x; flip so the front leads, then lamps behind the
+        // middle are the tail lamps.
+        flipX: true,
+        tailBelowX: 0,
+      });
     },
   },
   {
-    label: 'lofting lexus lfa',
+    label: 'loading lexus lfa model',
     run: async () => {
-      await nextFrame();
-      assets.lfa = lexusLFA();
+      assets.lfa = await loadWireModel('/models/lfa.bin', {
+        body: [0.78, 0.8, 0.86],
+        glass: [0.5, 0.68, 0.86],
+        lamp: [1, 1, 0.94],
+        trim: [0.42, 0.45, 0.52],
+        wheel: [0.55, 0.57, 0.62],
+        amber: [1, 0.62, 0.1],
+        red: [1, 0.22, 0.18],
+        flipX: true,
+      });
     },
   },
 ];
