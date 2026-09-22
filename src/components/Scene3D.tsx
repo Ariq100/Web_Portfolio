@@ -10,10 +10,9 @@ const CAMERA_Z = 8;
 const FOV = 50;
 
 const GREEN = '#32d74b';
-const MAGENTA = '#bf5af2';
 const WHITE = '#e5e5e5';
 
-type Motion = 'portrait' | 'relief' | 'spin' | 'turntable' | 'sway' | 'hang';
+type Motion = 'portrait' | 'spin' | 'turntable' | 'sway' | 'blade';
 
 interface Placement {
   asset: AssetName;
@@ -36,9 +35,9 @@ interface Placement {
 
 const PLACEMENTS: Placement[] = [
   { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.64, y: 0.02, size: 0.7, opacity: 1, motion: 'portrait' },
-  { asset: 'lelouch', section: 'about', color: MAGENTA, x: 0.64, y: 0, size: 0.66, opacity: 0.8, motion: 'relief' },
+  { asset: 'sword', section: 'about', color: WHITE, x: 0.64, y: 0, size: 0.7, opacity: 0.85, motion: 'blade', rotation: [0, 0, -0.18] },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
-  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.02, z: -1, size: 0.42, opacity: 0.85, motion: 'hang' },
+  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0] },
   // y is downward: the Porsche sits above the LFA in the right-hand column.
   { asset: 'porsche', section: 'contact', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0] },
   { asset: 'lfa', section: 'contact', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0] },
@@ -98,18 +97,15 @@ function Anchored({ p }: { p: Placement }) {
       case 'portrait':
         r.set(rx + motion.my * 0.1, ry + Math.sin(t * 0.3) * 0.12 + motion.mx * 0.3, rz);
         break;
-      case 'relief':
-        r.set(rx + motion.my * 0.18, ry + Math.sin(t * 0.35) * 0.3 + motion.mx * 0.45, rz);
+      case 'blade':
+        // Stands tilted, slowly turning so the slab of the blade catches the eye.
+        r.set(rx + motion.my * 0.1, ry + t * 0.35 + motion.mx * 0.5, rz);
         break;
       case 'spin':
         r.set(rx + t * 0.4 + motion.my * 0.4, ry + t * 0.7 + motion.mx * 0.6, rz);
         break;
       case 'turntable':
         r.set(rx + motion.my * 0.1, ry + t * 0.25 + motion.mx * 0.4, rz);
-        break;
-      case 'hang':
-        // Swings gently from its paws, turning a little toward the cursor.
-        r.set(rx + motion.my * 0.08, ry + Math.sin(t * 0.6) * 0.2 + motion.mx * 0.3, rz + Math.sin(t * 0.9) * 0.05);
         break;
       case 'sway':
         r.set(rx + motion.my * 0.12, ry + Math.sin(t * 0.5) * 0.45 + motion.mx * 0.5, rz);

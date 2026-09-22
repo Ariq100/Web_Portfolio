@@ -9,6 +9,10 @@ Rebuild the site's models (Blender = /Applications/Blender.app/Contents/MacOS/Bl
       --python tools/extract_wireframe.py -- public/models/porsche930.bin porsche
   unzip model-sources/2011-lexus-lfa/source/FINAL_MODEL.zip FINAL_MODEL.fbx -d /tmp/lfa
   Blender -b --python tools/extract_wireframe.py -- public/models/lfa.bin lfa /tmp/lfa/FINAL_MODEL.fbx
+  Blender -b --python tools/extract_wireframe.py -- public/models/cat.bin cat \
+      model-sources/3d-modelling-my-cat-fripouille/source/frip_F_export.fbx
+  Blender -b --python tools/extract_wireframe.py -- public/models/sword.bin sword \
+      model-sources/berserk-sword/source/berserk_low11.fbx
 
 For every visible mesh (after modifiers such as Mirror are applied) it keeps:
   * feature edges: open borders, creases sharper than CREASE_DEG, and material borders
@@ -47,6 +51,19 @@ PRESETS = {
                     ("wheel", WHEEL), ("calliper", WHEEL), ("carbon", TRIM), ("grille", TRIM),
                     ("badge", TRIM), ("plate", TRIM), ("base", TRIM)],
         "slices": (40, 12, 9),
+    },
+    # Low-poly models: every mesh edge is kept, so the frame is the model's full topology.
+    "cat": {
+        "skip_obj": [],
+        "classes": [("eye", LAMP), ("whisker", TRIM), ("frip", BODY)],
+        "slices": None,
+        "all_edges": True,
+    },
+    "sword": {
+        "skip_obj": [],
+        "classes": [("sword", BODY)],
+        "slices": None,
+        "all_edges": True,
     },
 }[preset]
 
@@ -92,6 +109,8 @@ for obj in bpy.context.scene.objects:
     keep, keep_cls = [], []
     for (a, b), faces in edge_faces.items():
         f0 = faces[0]
+        if PRESETS.get("all_edges"):
+            keep.append((a, b)); keep_cls.append(poly_cls[f0]); continue
         if len(faces) == 1:
             keep.append((a, b)); keep_cls.append(poly_cls[f0]); continue
         f1 = faces[1]
@@ -116,7 +135,7 @@ segs = np.vstack(segments)
 cls = np.concatenate(classes)
 
 # Section lines: slice body triangles with planes along each axis.
-if body_tris:
+if body_tris and PRESETS["slices"]:
     T = np.vstack(body_tris)  # (n, 3, 3)
     lo, hi = T.reshape(-1, 3).min(0), T.reshape(-1, 3).max(0)
     counts = PRESETS["slices"]
