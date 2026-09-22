@@ -475,6 +475,12 @@ p {
   white-space: pre;
 }
 
+/* Keys never shrink or wrap. */
+.kv > :first-child,
+.kv > :nth-child(2) {
+  flex: none;
+}
+
 /* Long values wrap under themselves, keeping the key column aligned. */
 .kv > :last-child {
   white-space: normal;

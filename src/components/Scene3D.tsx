@@ -6,6 +6,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { assets, type AssetName } from '../three/assets';
 import { createPhotoMaterial, createPhotoPlane } from '../three/photoPoints';
 import { tearSurface } from './TearCanvas';
+import { textCoverage } from '../three/textCover';
 
 const CAMERA_Z = 8;
 const FOV = 50;
@@ -32,21 +33,28 @@ interface Placement {
   motion: Motion;
   /** Base rotation. */
   rotation?: [number, number, number];
+  /**
+   * Opacity multiplier while text covers the model (default TEXT_DIM). Dense models
+   * need less: many overlapping lines add up even at low opacity.
+   */
+  textDim?: number;
 }
 
 const PLACEMENTS: Placement[] = [
   { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.52, y: 0.04, size: 0.62, opacity: 1, motion: 'portrait' },
   { asset: 'sword', section: 'about', color: WHITE, x: 0.64, y: 0, size: 0.7, opacity: 0.85, motion: 'blade', rotation: [0, 0, -0.18] },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
-  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0] },
+  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0], textDim: 0.06 },
   // y is downward: the Porsche sits above the LFA in the right-hand column.
-  { asset: 'porsche', section: 'contact', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0] },
-  { asset: 'lfa', section: 'contact', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0] },
+  { asset: 'porsche', section: 'contact', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0], textDim: 0.03 },
+  { asset: 'lfa', section: 'contact', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0], textDim: 0.03 },
 ];
 
 const halfHeightAt = (z: number) => Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * (CAMERA_Z - z);
 
 const ASSEMBLE_SECONDS = 2.4;
+/** Opacity multiplier for a model that sits behind text. */
+const TEXT_DIM = 0.1;
 
 /** A model that tracks its section's on-screen position. */
 function Anchored({ p }: { p: Placement }) {
@@ -55,7 +63,7 @@ function Anchored({ p }: { p: Placement }) {
   const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
   const opacity = useRef(0);
   const assembled = useRef(0);
-  const { size, gl } = useThree();
+  const { size, gl, camera } = useThree();
   const reduced = useReducedMotion();
   const geometry = assets[p.asset];
   const baseColor = useMemo(() => new THREE.Color(p.color), [p.color]);
@@ -72,10 +80,19 @@ function Anchored({ p }: { p: Placement }) {
     return t;
   }, [p.kind]);
   const tearVersion = useRef(-1);
+  const tearSize = useRef({ w: 0, h: 0 });
   const photoPlane = useMemo(
     () => (p.kind === 'photo' && geometry && tear ? createPhotoPlane(geometry, tear) : null),
     [p.kind, geometry, tear],
   );
+  // Local bounds used to measure how much text covers the model on screen.
+  const bounds = useMemo(() => {
+    const src = photoPlane?.geometry ?? geometry;
+    if (!src) return null;
+    src.computeBoundingBox();
+    return src.boundingBox!.clone();
+  }, [geometry, photoPlane]);
+  const cover = useRef(0);
 
   useFrame((state, delta) => {
     const g = group.current;
@@ -126,9 +143,15 @@ function Anchored({ p }: { p: Placement }) {
     // Fade by how much of the viewport the section fills, so neighbours cross-fade.
     const coverage = Math.max(0, Math.min(rect.bottom, size.height) - Math.max(rect.top, 0)) / size.height;
     const presence = THREE.MathUtils.smoothstep(coverage, 0.2, 0.6);
-    // On narrow screens models sit behind the text, so keep them faint.
-    const narrowDim = p.kind === 'photo' ? 0.2 : 0.3;
-    const target = presence * (p.opacity ?? 0.6) * (narrow ? narrowDim : 1);
+    // Fade whenever text sits over the model (phones, narrow windows, long lines), so
+    // the words stay readable; full strength again once it is clear of the text.
+    if (bounds) {
+      inner.current.updateWorldMatrix(true, false);
+      const c = textCoverage(inner.current, bounds, camera, size.width, size.height);
+      cover.current += (c - cover.current) * 0.15;
+    }
+    const behindText = THREE.MathUtils.smoothstep(cover.current, 0.004, 0.035);
+    const target = presence * (p.opacity ?? 0.6) * THREE.MathUtils.lerp(1, p.textDim ?? TEXT_DIM, behindText);
     opacity.current += (target - opacity.current) * 0.08;
     g.visible = opacity.current > 0.01;
     if (lineMaterial.current) lineMaterial.current.opacity = opacity.current;
@@ -150,6 +173,12 @@ function Anchored({ p }: { p: Placement }) {
       (pu.uViewport.value as THREE.Vector2).set(size.width * gl.getPixelRatio(), size.height * gl.getPixelRatio());
       if (tear && tearVersion.current !== tearSurface.version) {
         tearVersion.current = tearSurface.version;
+        const c = tearSurface.canvas!;
+        // A resized canvas needs a freshly allocated GPU texture, not a sub-image update.
+        if (tearSize.current.w !== c.width || tearSize.current.h !== c.height) {
+          tearSize.current = { w: c.width, h: c.height };
+          tear.dispose();
+        }
         tear.needsUpdate = true;
       }
     }
