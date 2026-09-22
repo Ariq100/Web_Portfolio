@@ -487,6 +487,17 @@ p {
   min-width: 0;
 }
 
+.summary-para {
+  display: block;
+  margin-top: 0.6em;
+}
+
+/* The tagline: first paragraph of README.md. */
+.summary-lead {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .summary {
   max-width: 72ch;
   white-space: normal;

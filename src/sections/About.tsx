@@ -30,8 +30,11 @@ export function About() {
           <span />,
           <p className="summary">
             <span className="c-yellow">README.md</span>
-            <br />
-            {profile.about.summary}
+            {profile.about.summary.split('\n\n').map((para, i) => (
+              <span className={`summary-para${i === 0 ? ' summary-lead' : ''}`} key={para}>
+                {para}
+              </span>
+            ))}
           </p>,
           <span />,
           <span className="c-yellow">EXPERIENCE</span>,

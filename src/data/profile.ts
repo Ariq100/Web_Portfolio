@@ -41,8 +41,9 @@ export const profile = {
   funFacts: ['Jack of all trades, master of none', 'I always have more than 15 tabs open', 'Bob the Builder'],
 
   about: {
+    /** README.md in about-me; blank lines start new paragraphs. */
     summary:
-      "Self-taught developer who picked up Python, C++, Java and JavaScript on my own, then moved into React and full-stack web development. I recently taught myself TypeScript in a single hackathon night to keep up with a new team's stack, and I'm currently building an iOS app with Swift and Supabase, a language and framework I learned from scratch for the project. I'd rather learn a new tool mid-project than sit one out, and building things - fast, and often outside my comfort zone - is what keeps me in this field.",
+      "Love to build software and algorithms that ships. Systems that scale.\n\nI'm ambitious. I work across the full stack, I still have a lot to learn, and I throw myself at every opportunity to learn it.",
     details: [
       { key: 'name', value: 'Shadman Muhtasim Ariq' },
       { key: 'studying', value: 'Bachelor of Computer Science' },
@@ -105,14 +106,19 @@ export const profile = {
     },
     {
       name: 'Racle',
-      url: 'https://devpost.com/software/rackle',
+      url: 'https://racle-one.vercel.app/',
+      links: [
+        { label: 'github', href: 'https://github.com/Ariq100/Racle' },
+        { label: 'devpost', href: 'https://devpost.com/software/rackle' },
+      ],
       when: 'Aug 2026',
       description:
         'A gamified AI receipt scanner that tracks food carbon footprints and maps nearby scrap vendors for instant recycling cash payouts.',
     },
     {
       name: 'PEDDY',
-      url: 'https://github.com/Ariq100/Peddy',
+      url: 'https://petad0pti0n.netlify.app/',
+      links: [{ label: 'github', href: 'https://github.com/Ariq100/Peddy' }],
       when: 'Dec 2025',
       description:
         "A responsive pet adoption platform built for a Programming Hero assignment. Browse pets by category, view details and adopt, with dynamic data from Programming Hero's APIs.",
