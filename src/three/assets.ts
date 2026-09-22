@@ -2,9 +2,9 @@ import type * as THREE from 'three';
 import { imageWireframe } from './imageWireframe';
 import { photoPoints } from './photoPoints';
 import { cat, football } from './models';
-import { astonVantage, porsche930 } from './cars';
+import { lexusLFA, porsche930 } from './cars';
 
-export type AssetName = 'me' | 'lelouch' | 'ball' | 'cat' | 'porsche' | 'aston';
+export type AssetName = 'me' | 'lelouch' | 'ball' | 'cat' | 'porsche' | 'lfa';
 
 /** Geometry cache filled during the boot screen and read synchronously by the scene. */
 export const assets = {} as Record<AssetName, THREE.BufferGeometry>;
@@ -49,7 +49,7 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'sculpting cat.png → wireframe',
+    label: 'sketching cat.png → wireframe',
     run: async () => {
       await nextFrame();
       assets.cat = cat();
@@ -63,10 +63,10 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'lofting aston martin vantage',
+    label: 'lofting lexus lfa',
     run: async () => {
       await nextFrame();
-      assets.aston = astonVantage();
+      assets.lfa = lexusLFA();
     },
   },
 ];

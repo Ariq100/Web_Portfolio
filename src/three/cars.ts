@@ -338,89 +338,107 @@ export function porsche930() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Aston Martin Vantage: long bonnet with vents, wide mesh grille,     */
-/* swept lamps, fastback into a ducktail, blade tail-lamp, diffuser.   */
+/* Lexus LFA: pointed V nose, wide lower mesh intake, triangular      */
+/* corner vents, swept lamps, two bonnet vents; at the back, big      */
+/* triangular mesh panels under blade tail-lamps and a triple exhaust. */
 /* ------------------------------------------------------------------ */
 
-export function astonVantage() {
+export function lexusLFA() {
   const car = new CarBody(
     [
-      { x: 0.0, hw: 0.9, bottom: 0.34, belt: 0.82, crest: 0.04, roof: 0.92, roofHw: 0.62, crown: 0.02 },
-      { x: 0.22, hw: 0.97, bottom: 0.26, belt: 0.84, crest: 0.06, roof: 0.96, roofHw: 0.6, crown: 0.03 },
-      { x: 0.7, hw: 0.99, bottom: 0.24, belt: 0.82, crest: 0.08, roof: 1.06, roofHw: 0.5, crown: 0.04 },
-      { x: 1.25, hw: 0.97, bottom: 0.24, belt: 0.8, crest: 0.06, roof: 1.2, roofHw: 0.52, crown: 0.04 },
-      { x: 1.75, hw: 0.93, bottom: 0.24, belt: 0.8, crest: 0.04, roof: 1.27, roofHw: 0.56, crown: 0.03 },
-      { x: 2.2, hw: 0.92, bottom: 0.24, belt: 0.8, crest: 0.04, roof: 1.24, roofHw: 0.58, crown: 0.03 },
-      { x: 2.8, hw: 0.93, bottom: 0.24, belt: 0.78, crest: 0.04, roof: 0.84, roofHw: 0.66, crown: 0.05 },
-      // Long bonnet over bulging front wings.
-      { x: 3.3, hw: 0.97, bottom: 0.24, belt: 0.74, crest: 0.06, roof: 0.8, roofHw: 0.56, crown: 0.06 },
-      { x: 3.9, hw: 0.97, bottom: 0.24, belt: 0.7, crest: 0.06, roof: 0.72, roofHw: 0.54, crown: 0.05 },
-      { x: 4.3, hw: 0.9, bottom: 0.22, belt: 0.6, crest: 0.04, roof: 0.6, roofHw: 0.5, crown: 0.03 },
-      { x: 4.5, hw: 0.74, bottom: 0.2, belt: 0.42, crest: 0.01, roof: 0.44, roofHw: 0.46, crown: 0.01 },
+      { x: 0.0, hw: 0.86, bottom: 0.32, belt: 0.82, crest: 0.04, roof: 0.92, roofHw: 0.68, crown: 0.02 },
+      { x: 0.2, hw: 0.94, bottom: 0.26, belt: 0.85, crest: 0.06, roof: 0.97, roofHw: 0.62, crown: 0.03 },
+      { x: 0.7, hw: 0.96, bottom: 0.24, belt: 0.84, crest: 0.06, roof: 1.01, roofHw: 0.52, crown: 0.04 },
+      { x: 1.2, hw: 0.95, bottom: 0.24, belt: 0.82, crest: 0.05, roof: 1.15, roofHw: 0.52, crown: 0.04 },
+      { x: 1.75, hw: 0.9, bottom: 0.24, belt: 0.82, crest: 0.04, roof: 1.22, roofHw: 0.55, crown: 0.03 },
+      { x: 2.2, hw: 0.9, bottom: 0.24, belt: 0.8, crest: 0.04, roof: 1.18, roofHw: 0.58, crown: 0.03 },
+      { x: 2.75, hw: 0.91, bottom: 0.24, belt: 0.77, crest: 0.04, roof: 0.86, roofHw: 0.66, crown: 0.04 },
+      // Long bonnet between high front wings, narrowing to a pointed nose.
+      { x: 3.3, hw: 0.94, bottom: 0.24, belt: 0.73, crest: 0.07, roof: 0.78, roofHw: 0.54, crown: 0.05 },
+      { x: 3.9, hw: 0.93, bottom: 0.24, belt: 0.68, crest: 0.07, roof: 0.69, roofHw: 0.48, crown: 0.05 },
+      { x: 4.3, hw: 0.86, bottom: 0.22, belt: 0.56, crest: 0.04, roof: 0.56, roofHw: 0.36, crown: 0.05 },
+      { x: 4.5, hw: 0.66, bottom: 0.22, belt: 0.42, crest: 0.01, roof: 0.44, roofHw: 0.22, crown: 0.03 },
     ],
     [
-      { x: 0.86, r: 0.35, spokes: 5 },
-      { x: 3.56, r: 0.35, spokes: 5 },
+      { x: 0.93, r: 0.34, spokes: 10 },
+      { x: 3.54, r: 0.335, spokes: 10 },
     ],
-    // Teal paint from the front photo.
-    [0.25, 0.82, 0.86],
+    // Pearl white, as in both photos.
+    [0.93, 0.94, 0.98],
   );
   car.loft();
   car.drawWheels();
 
-  // Greenhouse: single sweeping side window, windscreen, rear glass.
-  car.mirrored([[2.78, 4.15], [2.3, 4.9], [1.65, 4.95], [1.05, 4.4], [1.2, 4.12]], true, GLASS);
-  car.path([[2.8, 4.3, 1], [2.8, 4.3, -1], [2.3, 4.95, -1], [2.3, 4.95, 1]], true, GLASS);
-  car.path([[1.55, 5.1, 1], [1.55, 5.1, -1], [0.55, 5.35, -1], [0.55, 5.35, 1]], true, GLASS);
+  const MESH: V3 = [0.42, 0.45, 0.52];
 
-  // Lime accents from the photo: side-sill stripe.
-  const LIME: V3 = [0.82, 1, 0.2];
-  car.mirrored([[3.18, 1.02], [1.24, 1.02]], false, LIME);
+  // Greenhouse.
+  car.mirrored([[2.72, 4.15], [2.22, 4.9], [1.7, 4.95], [1.12, 4.45], [1.34, 4.12]], true, GLASS);
+  car.path([[2.76, 4.3, 1], [2.76, 4.3, -1], [2.22, 4.95, -1], [2.22, 4.95, 1]], true, GLASS);
+  car.path([[1.6, 5.1, 1], [1.6, 5.1, -1], [0.78, 5.3, -1], [0.78, 5.3, 1]], true, GLASS);
+  // Flush rear wing line across the deck and the shark-fin antenna.
+  car.path([[0.14, 5.4, 1], [0.14, 5.4, -1]], false, MESH);
+  const fin = car.surf(1.5, 7, 1, 0);
+  car.lb.polyline([[fin[0] - 0.12, fin[1], 0], [fin[0] - 0.02, fin[1] + 0.07, 0], [fin[0] + 0.04, fin[1], 0]], false, 0.9);
 
-  // Bonnet vents and the side strakes behind the front wheels.
   for (const side of [-1, 1] as Side[]) {
-    car.path([[3.2, 5.6, side], [3.55, 6.3, side]], false, 0.8);
-    car.path([[3.15, 5.75, side], [3.5, 6.45, side]], false, 0.8);
-    car.path([[3.12, 2.4, side], [2.95, 3.4, side], [3.02, 3.5, side], [3.18, 2.5, side]], true, TRIM);
+    // Two small mesh vents on the bonnet.
+    car.path([[3.5, 5.5, side], [3.5, 6.1, side], [3.72, 6.1, side], [3.72, 5.5, side]], true, MESH);
+    // Swept headlamp with a sharp inner point, and its projector.
+    car.path([[4.44, 3.1, side], [4.26, 3.9, side], [4.08, 4.6, side], [4.22, 4.35, side], [4.4, 3.55, side]], true, HEADLAMP);
+    const pr = car.surf(4.3, 3.6, side, 0.01);
+    car.lamp(pr, 0.04, HEADLAMP, 0.6);
+    // Triangular corner intakes with mesh.
+    const tri: V3[] = [[4.47, 0.5, side * 0.5], [4.4, 0.52, side * 0.78], [4.42, 0.28, side * 0.72]];
+    car.lb.polyline(tri, true, MESH);
+    for (let i = 1; i < 4; i++) car.lb.line([4.46, 0.5 - i * 0.05, side * (0.52 + i * 0.03)], [4.42, 0.5 - i * 0.05, side * 0.74], MESH);
+    // Side scoop ahead of the rear wheel, fed by the crease along the door.
+    car.path([[1.62, 2.2, side], [1.3, 3.1, side], [1.48, 3.55, side], [1.8, 2.6, side]], true, MESH);
+    car.path([[2.9, 2.6, side], [2.2, 2.9, side], [1.8, 3.05, side]], false, 0.8);
     // Door line and mirror.
-    car.path([[2.86, 1.2, side], [2.86, 3.9, side]], false, 0.6);
-    const m = car.surf(2.64, 4.2, side, 0.01);
-    car.lb.polyline([m, [m[0] - 0.04, m[1] + 0.08, side * 1.1], [m[0] - 0.18, m[1] + 0.07, side * 1.1], [m[0] - 0.13, m[1] - 0.01, m[2]]], true, 0.9);
-    // Swept headlamps along the top of each wing.
-    car.path([[4.47, 2.85, side], [4.3, 3.6, side], [4.04, 4.1, side], [4.14, 3.55, side], [4.4, 2.75, side]], true, HEADLAMP);
-    car.path([[4.4, 3.0, side], [4.18, 3.7, side]], false, HEADLAMP);
-    car.path([[4.36, 2.95, side], [4.14, 3.62, side]], false, [0.7, 0.72, 0.7]);
-    // Rear haunch crease.
-    car.path([[0.35, 3.2, side], [1.1, 3.3, side], [1.5, 3.9, side]], false, 0.7);
+    car.path([[2.8, 1.2, side], [2.78, 3.9, side]], false, 0.6);
+    const m = car.surf(2.6, 4.2, side, 0.01);
+    car.lb.polyline([m, [m[0] - 0.04, m[1] + 0.07, side * 1.06], [m[0] - 0.17, m[1] + 0.07, side * 1.06], [m[0] - 0.13, m[1] - 0.01, m[2]]], true, 0.9);
+    // Side markers.
+    car.path([[4.2, 2.6, side], [4.12, 2.6, side]], false, AMBER);
   }
 
-  // Wide grille: lower-mouth trapezoid filled with a diamond mesh.
+  // Wide lower intake with mesh, splitter, and the Lexus badge on the nose.
   const gx = 4.52;
-  const gTop = 0.5;
-  const gBot = 0.24;
-  const topHw = 0.5;
-  const botHw = 0.62;
-  car.lb.polyline([[gx, gBot, -botHw], [gx, gBot, botHw], [gx - 0.03, gTop, topHw], [gx - 0.03, gTop, -topHw]], true, LIME);
-  car.lb.polyline([[gx + 0.01, gBot - 0.02, -botHw - 0.03], [gx + 0.01, gBot - 0.02, botHw + 0.03], [gx - 0.02, gTop + 0.02, topHw + 0.03], [gx - 0.02, gTop + 0.02, -topHw - 0.03]], true, LIME);
-  const hwAt = (y: number) => botHw + (topHw - botHw) * ((y - gBot) / (gTop - gBot));
-  for (let i = -9; i <= 9; i++) {
-    for (const dir of [1, -1]) {
-      const z0 = (i / 9) * botHw;
-      const z1 = z0 + dir * (gTop - gBot) * 1.4;
-      if (Math.abs(z1) > hwAt(gTop) || Math.abs(z0) > botHw) continue;
-      car.lb.line([gx, gBot, z0], [gx - 0.03, gTop, z1], TRIM);
-    }
-  }
-  // Splitter lip under the grille.
-  car.lb.polyline([[4.56, 0.2, -0.78], [4.56, 0.2, 0.78]], false, LIME);
+  car.lb.polyline([[gx, 0.24, -0.42], [gx, 0.24, 0.42], [gx - 0.02, 0.37, 0.36], [gx - 0.02, 0.37, -0.36]], true, MESH);
+  for (let i = -8; i <= 8; i++) car.lb.line([gx, 0.24, i * 0.05], [gx - 0.02, 0.37, i * 0.043], scale3(MESH, 0.8));
+  car.lb.line([gx - 0.01, 0.305, -0.39], [gx - 0.01, 0.305, 0.39], scale3(MESH, 0.8));
+  car.lb.polyline([[4.56, 0.2, -0.7], [4.56, 0.2, 0.7]], false, MESH);
+  car.lb.ellipse([4.5, 0.44, 0], 0.035, 0.045, 'yz', 14, 0.9);
+  // The bonnet's V shut line meeting at the nose.
+  car.path([[3.95, 4.9, 1], [4.46, 6.6, 1]], false, 0.6);
+  car.path([[3.95, 4.9, -1], [4.46, 6.6, -1]], false, 0.6);
 
-  // Blade tail-lamp across the ducktail, diffuser fins and quad exhausts.
-  car.lb.polyline([[-0.02, 0.9, -0.84], [0.02, 0.88, 0], [-0.02, 0.9, 0.84]], false, TAIL_RED);
-  car.lb.polyline([[-0.03, 0.96, -0.72], [-0.03, 0.96, 0.72]], false, 0.8);
-  car.lb.polyline([[-0.02, 0.36, -0.7], [-0.02, 0.36, 0.7]], false, 0.8);
-  for (let i = -3; i <= 3; i++) car.lb.line([-0.02, 0.36, i * 0.12], [-0.02, 0.22, i * 0.12], TRIM);
-  for (const z of [-0.5, -0.36, 0.36, 0.5]) car.lb.ellipse([-0.04, 0.29, z], 0.05, 0.05, 'yz', 12, TRIM);
-  car.lb.polyline([[-0.01, 0.46, -0.26], [-0.01, 0.46, 0.26], [-0.01, 0.6, 0.26], [-0.01, 0.6, -0.26]], true, 0.5);
+  // Rear: triangular mesh panels under blade tail-lamps.
+  for (const side of [-1, 1]) {
+    const tri: V3[] = [[-0.01, 0.8, side * 0.44], [-0.01, 0.8, side * 0.9], [-0.01, 0.44, side * 0.86]];
+    car.lb.polyline(tri, true, MESH);
+    for (let i = 1; i < 6; i++) {
+      const y = 0.8 - i * 0.06;
+      const zIn = 0.44 + (0.86 - 0.44) * ((0.8 - y) / 0.36);
+      car.lb.line([-0.01, y, side * zIn], [-0.01, y, side * 0.89], scale3(MESH, 0.8));
+    }
+    for (let i = 1; i < 5; i++) {
+      const z = 0.44 + i * 0.1;
+      car.lb.line([-0.01, 0.8, side * z], [-0.01, 0.8 - Math.min(0.36, (z - 0.44) * 0.86), side * z], scale3(MESH, 0.8));
+    }
+    // Tail-lamp blade: pointed at the inner end.
+    car.lb.polyline([[0.0, 0.86, side * 0.4], [0.0, 0.84, side * 0.94], [0.0, 0.8, side * 0.94], [0.0, 0.81, side * 0.5]], true, TAIL_RED);
+  }
+  // Plate recess, badge, triple exhaust and diffuser.
+  car.lb.polyline([[-0.01, 0.5, -0.24], [-0.01, 0.5, 0.24], [-0.01, 0.66, 0.24], [-0.01, 0.66, -0.24]], true, 0.6);
+  car.lb.ellipse([-0.01, 0.74, 0], 0.03, 0.04, 'yz', 12, 0.9);
+  for (const [z, y] of [[-0.07, 0.36], [0.07, 0.36], [0, 0.27]]) car.lb.ellipse([-0.04, y, z], 0.045, 0.045, 'yz', 14, TRIM);
+  car.lb.polyline([[-0.02, 0.24, -0.7], [-0.02, 0.24, 0.7]], false, MESH);
+  for (let i = -3; i <= 3; i++) if (i !== 0) car.lb.line([-0.02, 0.4, i * 0.16], [-0.02, 0.24, i * 0.16], MESH);
 
   return car.build();
+}
+
+function scale3(c: V3, k: number): V3 {
+  return [c[0] * k, c[1] * k, c[2] * k];
 }

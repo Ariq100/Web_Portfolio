@@ -98,175 +98,133 @@ export function football() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Cat: a 3D bust of the chunky black cat in public/images/cat.png.    */
-/* Silhouette, eyes, nose, mouth and whiskers are measured from the    */
-/* image (857×1200 px) and projected onto a soft, squarish body.       */
+/* Cat: the silhouette in public/images/cat.png (226×360 px), hanging  */
+/* off a wall by its front paws, with claw scratches above each paw.   */
+/* Every part is placed from pixel positions measured in the image.    */
 /* ------------------------------------------------------------------ */
 
-const FUR: V3 = [0.62, 0.65, 0.72];
-const GOLD: V3 = [1, 0.78, 0.22];
-const AMBER_DARK: V3 = [0.95, 0.52, 0.12];
-const WHITE_LINE: V3 = [0.95, 0.95, 0.95];
+const FUR: V3 = [0.66, 0.69, 0.76];
+const WHITE_LINE: V3 = [0.96, 0.96, 0.96];
+const SCRATCH: V3 = [0.85, 0.82, 0.78];
 
-/** Image pixels → model units (y up, centred on the face). */
-const PX = 400;
-const CX = 430;
-const toX = (x: number) => (x - CX) / PX;
-const toY = (y: number) => (1200 - y) / PX;
+/** Image pixels → model units (y up, centred on the body). */
+const PX = 100;
+const CX = 113;
+const px = (x: number, y: number, z = 0): V3 => [(x - CX) / PX, (360 - y) / PX, z];
 
-/** Left/right outline of the body per image row, measured from the PNG's alpha. */
-const OUTLINE: [number, number, number][] = [
-  // y, left x, right x — the top rows round the crown between the ears.
-  [366, 392, 468], [370, 340, 520], [376, 300, 560], [384, 262, 598], [394, 230, 630],
-  [406, 205, 655], [420, 186, 674], [436, 174, 686], [452, 166, 690],
-  [480, 156, 698], [510, 149, 705], [540, 146, 711], [570, 143, 715], [600, 142, 717],
-  [630, 142, 717], [660, 144, 714], [690, 145, 710], [720, 146, 707], [750, 147, 706],
-  [780, 144, 712], [810, 137, 719], [840, 125, 727], [870, 114, 735], [900, 102, 741],
-  [930, 91, 746], [960, 80, 751], [990, 71, 755], [1020, 62, 759], [1050, 53, 762],
-  [1080, 45, 764], [1110, 38, 766], [1140, 32, 766], [1170, 27, 766], [1200, 24, 767],
-];
+/** The wall the cat hangs on sits just behind it. */
+const WALL_Z = -0.36;
 
-/** Squareness of the cross-sections (2 = ellipse, higher = boxier). */
-const SQUARE = 2.6;
-
-function outlineAt(y: number) {
-  let i = OUTLINE.findIndex((r) => r[0] >= y);
-  if (i <= 0) i = 1;
-  if (i === -1) i = OUTLINE.length - 1;
-  const [y0, l0, r0] = OUTLINE[i - 1];
-  const [y1, l1, r1] = OUTLINE[i];
-  const f = Math.min(1, Math.max(0, (y - y0) / (y1 - y0)));
-  const l = l0 + (l1 - l0) * f;
-  const r = r0 + (r1 - r0) * f;
-  return { centre: toX((l + r) / 2), half: (r - l) / 2 / PX };
-}
-
-/** Front-to-back half depth: round head, deeper chest. */
-function depthAt(y: number) {
-  const { half } = outlineAt(y);
-  const head = y < 780 ? 0.82 : 0.82 + ((y - 780) / 420) * 0.12;
-  // The crown domes back over the top of the head.
-  const crown = y < 452 ? Math.sqrt(Math.max(0.04, 1 - Math.pow((452 - y) / 86, 2))) : 1;
-  return half * head * crown;
-}
-
-const superPow = (v: number, e: number) => Math.sign(v) * Math.pow(Math.abs(v), e);
-
-/** A point on the front of the body under image pixel (x, y), lifted slightly off the surface. */
-function onFace(x: number, y: number, lift = 0.012): V3 {
-  const { centre, half } = outlineAt(y);
-  const X = toX(x);
-  const u = Math.min(0.999, Math.abs((X - centre) / half));
-  const z = depthAt(y) * Math.pow(1 - Math.pow(u, SQUARE), 1 / SQUARE);
-  return [X, toY(y), z + lift];
+/** Point on the front of an ellipsoid (centre and radii in image pixels) under pixel (x, y). */
+function onBlob(cx: number, cy: number, rx: number, ry: number, rz: number, x: number, y: number, lift = 0.01): V3 {
+  const u = (x - cx) / rx;
+  const v = (y - cy) / ry;
+  const z = (rz / PX) * Math.sqrt(Math.max(0, 1 - u * u - v * v));
+  return px(x, y, z + lift);
 }
 
 export function cat() {
   const lb = new LineBuilder();
+  const fur = (k: number): Shade => scale(FUR, k);
+  const blob = (cx: number, cy: number, rx: number, ry: number, rz: number, rings: number, meridians: number, k: number) =>
+    lb.ellipsoid(px(cx, cy), [rx / PX, ry / PX, rz / PX], rings, meridians, fur(k));
+  const limb = (points: [number, number, number][], r: (t: number) => number, k = 0.8) =>
+    lb.tube(points.map(([x, y, z]) => px(x, y, z)), (t) => r(t) / PX, 18, 7, fur(k));
 
-  // Body: stacked squarish cross-sections following the image outline, plus meridians.
-  const levels: number[] = [];
-  for (const y of [366, 370, 376, 384, 394, 406, 420, 436]) levels.push(y);
-  for (let y = 460; y <= 1200; y += 40) levels.push(y);
-  if (levels[levels.length - 1] !== 1200) levels.push(1200);
-  const meridians = 20;
-  const ring = (y: number) => {
-    const { centre, half } = outlineAt(y);
-    const d = depthAt(y);
-    const pts: V3[] = [];
-    for (let k = 0; k < meridians * 2; k++) {
-      const t = (k / (meridians * 2)) * Math.PI * 2;
-      pts.push([centre + half * superPow(Math.cos(t), 2 / SQUARE), toY(y), d * superPow(Math.sin(t), 2 / SQUARE)]);
-    }
-    return pts;
-  };
-  const rings = levels.map(ring);
-  rings.forEach((r, i) => lb.polyline(r, true, scale(FUR, i === 0 || i === rings.length - 1 ? 0.8 : 0.5)));
-  for (let k = 0; k < meridians * 2; k += 2) lb.polyline(rings.map((r) => r[k]), false, scale(FUR, 0.45));
-
-
-  // Ears: wedges traced from the image, set on top of the head.
-  const ears: [number, number][][] = [
-    [[150, 450], [147, 330], [150, 285], [165, 258], [200, 270], [243, 300], [280, 330], [311, 360], [335, 374]],
-    [[520, 374], [535, 360], [562, 330], [588, 300], [621, 270], [662, 255], [690, 285], [697, 330], [690, 450]],
-  ];
-  ears.forEach((outline, e) => {
-    const side = e === 0 ? -1 : 1;
-    const front = outline.map(([x, y]) => {
-      const p = onFace(x, Math.max(y, 400), 0);
-      // Ears rise from the crown, leaning slightly back toward their tips.
-      const lean = (400 - Math.min(y, 400)) / PX;
-      return [toX(x), toY(y), Math.max(0.06, p[2] * 0.7) - lean * 0.3] as V3;
-    });
-    const back = front.map(([x, y, z]) => [x, y, z - 0.14] as V3);
-    // Nested contours shrink toward the ear's centre so it reads as a solid shape.
-    const cx = front.reduce((a, p) => a + p[0], 0) / front.length;
-    const cy = front.reduce((a, p) => a + p[1], 0) / front.length;
-    for (const k of [0.8, 0.6, 0.4]) {
-      lb.polyline(front.map(([x, y, z]) => [cx + (x - cx) * k, cy + (y - cy) * k, z + 0.01] as V3), false, scale(FUR, 0.35));
-    }
-    lb.polyline(front, false, FUR);
-    lb.polyline(back, false, scale(FUR, 0.6));
-    front.forEach((p, i) => i % 2 === 0 && lb.line(p, back[i], scale(FUR, 0.5)));
-    // Inner ear: a smaller wedge toward the head, with gold hairs.
-    const tip = front[e === 0 ? 3 : 5];
-    const baseA = front[e === 0 ? 0 : front.length - 1];
-    const baseB = front[e === 0 ? front.length - 1 : 0];
-    const inner = (f: number): V3 => [
-      tip[0] + (baseA[0] + (baseB[0] - baseA[0]) * f - tip[0]) * 0.8,
-      tip[1] + (baseA[1] + (baseB[1] - baseA[1]) * f - tip[1]) * 0.8,
-      tip[2] + 0.015,
-    ];
-    lb.polyline([inner(0.15), [tip[0] - side * 0.02, tip[1] - 0.06, tip[2] + 0.015], inner(0.85)], false, scale(FUR, 0.7));
-    for (const f of [0.35, 0.5, 0.65]) {
-      const start = inner(f);
-      lb.line([tip[0] + (start[0] - tip[0]) * 0.3, tip[1] + (start[1] - tip[1]) * 0.3, tip[2] + 0.02], start, GOLD);
-    }
-  });
-
-  // Eyes: gold irises filled with rings, darker amber crescent on the right, black pupils left open.
-  const faceEllipse = (cx: number, cy: number, rx: number, ry: number, shade: Shade, from = 0, to = Math.PI * 2, steps = 36) => {
-    const pts: V3[] = [];
-    for (let i = 0; i <= steps; i++) {
-      const a = from + ((to - from) * i) / steps;
-      pts.push(onFace(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, 0.02));
-    }
-    lb.polyline(pts, false, shade);
-  };
-  for (const [cx, cy, hx, hy] of [[301, 506, 306, 488], [543, 506, 528, 494]]) {
-    faceEllipse(cx, cy, 61, 56, WHITE_LINE); // dark outline in the image, drawn light here
-    for (let i = 0; i < 6; i++) {
-      const f = i / 6;
-      faceEllipse(cx, cy + 2, 57 - f * 30, 52 - f * 11, GOLD);
-    }
-    // Amber crescent on the right-hand side of each iris.
-    for (const r of [0, 5, 10]) faceEllipse(cx + 6, cy + 2, 50 - r, 50 - r, AMBER_DARK, -1.1, 1.1, 14);
-    // Pupil outline and highlight.
-    faceEllipse(cx - 1, cy + 2, 24, 41, WHITE_LINE);
-    faceEllipse(hx, hy, 5, 5, WHITE_LINE, 0, Math.PI * 2, 10);
+  // Head (round, slightly wide) and ears pointing up between the raised legs.
+  const HEAD = { cx: 113, cy: 140, rx: 33, ry: 27, rz: 28 };
+  blob(HEAD.cx, HEAD.cy, HEAD.rx, HEAD.ry, HEAD.rz, 8, 14, 0.6);
+  for (const [bx0, bx1, tip] of [[92, 108, 100], [118, 134, 126]] as const) {
+    const apex = px(tip, 104, 0.02);
+    const a = px(bx0, 118, 0.12);
+    const b = px(bx1, 118, 0.12);
+    const back = px((bx0 + bx1) / 2, 120, -0.08);
+    lb.polyline([a, apex, b], false, fur(1));
+    lb.line(apex, back, fur(0.7));
+    lb.line(a, back, fur(0.5));
+    lb.line(b, back, fur(0.5));
   }
 
-  // Nose: rounded inverted triangle; mouth: a line down then two curves out.
-  const nose: [number, number][] = [[384, 546], [395, 536], [420, 532], [446, 536], [458, 546], [446, 562], [428, 576], [420, 580], [412, 576], [394, 562]];
-  lb.polyline(nose.map(([x, y]) => onFace(x, y, 0.03)), true, WHITE_LINE);
-  lb.polyline([[420, 580], [421, 596], [421, 610]].map(([x, y]) => onFace(x, y, 0.025)), false, WHITE_LINE);
-  lb.polyline([[421, 610], [410, 626], [396, 636], [385, 640]].map(([x, y]) => onFace(x, y, 0.025)), false, WHITE_LINE);
-  lb.polyline([[421, 610], [432, 626], [450, 636], [468, 638]].map(([x, y]) => onFace(x, y, 0.025)), false, WHITE_LINE);
+  // Big white eyes looking up, pupils toward the nose.
+  const eye = (cx: number, cy: number, pupilX: number) => {
+    for (const k of [1, 0.75, 0.5]) {
+      const pts: V3[] = [];
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        pts.push(onBlob(HEAD.cx, HEAD.cy, HEAD.rx, HEAD.ry, HEAD.rz, cx + Math.cos(a) * 8.5 * k, cy + Math.sin(a) * 9 * k, 0.015));
+      }
+      lb.polyline(pts, false, k === 1 ? WHITE_LINE : scale(WHITE_LINE, 0.7));
+    }
+    const pupil: V3[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      pupil.push(onBlob(HEAD.cx, HEAD.cy, HEAD.rx, HEAD.ry, HEAD.rz, pupilX + Math.cos(a) * 2, cy - 2 + Math.sin(a) * 2.6, 0.02));
+    }
+    lb.polyline(pupil, false, WHITE_LINE);
+  };
+  eye(94, 135, 101);
+  eye(130, 137, 124);
 
-  // Whiskers: gold, fanning from the cheeks out past the face.
+  // Whiskers fanning out past the cheeks.
   const whiskers: [number, number, number, number][] = [
-    [345, 598, 142, 588], [345, 604, 146, 628], [348, 610, 158, 668], [352, 616, 150, 728],
-    [512, 598, 716, 560], [515, 604, 716, 598], [512, 610, 712, 646], [515, 616, 700, 704],
+    [97, 148, 70, 122], [96, 151, 66, 140], [98, 154, 74, 162],
+    [129, 148, 152, 124], [130, 151, 160, 140], [128, 154, 150, 162],
   ];
   for (const [x0, y0, x1, y1] of whiskers) {
-    const a = onFace(x0, y0, 0.02);
-    const b = onFace(x1, y1, 0);
-    lb.line(a, [b[0], b[1], b[2] + 0.14], GOLD);
+    lb.line(onBlob(HEAD.cx, HEAD.cy, HEAD.rx, HEAD.ry, HEAD.rz, x0, y0, 0.01), px(x1, y1, 0.16), scale(WHITE_LINE, 0.75));
   }
 
-  // Soft fold where the cheeks meet the chest.
-  lb.polyline([[178, 752], [230, 772], [290, 790], [320, 798]].map(([x, y]) => onFace(x, y)), false, scale(FUR, 0.8));
-  lb.polyline([[640, 770], [675, 760], [706, 748]].map(([x, y]) => onFace(x, y)), false, scale(FUR, 0.8));
+  // Long body hanging straight down from the head, as one continuous shape.
+  lb.lathe(
+    [
+      [0, 150], [30, 150], [34, 162], [35, 180], [35, 200], [35, 220], [34, 232], [28, 240], [0, 244],
+    ].map(([r, y]) => [r / PX, (360 - y) / PX] as [number, number]),
+    12,
+    [(114 - CX) / PX, 0, -0.02],
+    0.82,
+    fur(0.55),
+  );
+
+  // Front legs stretched up to the paws gripping the wall.
+  limb([[90, 150, 0.05], [83, 112, 0.0], [77, 84, -0.08], [75, 72, -0.14]], (t) => 6 - t * 1.5);
+  limb([[137, 150, 0.05], [141, 112, 0.0], [147, 84, -0.08], [150, 72, -0.14]], (t) => 6 - t * 1.5);
+  for (const [cx, claws] of [[75, [66, 71, 77, 82]], [150, [142, 147, 152, 158]]] as const) {
+    blob(cx, 70, 9, 7, 7, 4, 8, 0.9);
+    // White claws hooked into the wall.
+    for (const x of claws) lb.polyline([px(x, 66, -0.14), px(x + 0.5, 61, -0.25), px(x + 1, 58, WALL_Z)], false, WHITE_LINE);
+  }
+
+  // Scratch marks dragged down the wall above each paw, tapering toward the top.
+  for (const [x, top] of [[65, 14], [69, 12], [75, 13], [83, 16], [141, 16], [149, 12], [155, 13], [159, 15]] as const) {
+    lb.line(px(x - 0.6, 58, WALL_Z), px(x, top, WALL_Z), SCRATCH);
+    lb.line(px(x + 0.6, 58, WALL_Z), px(x, top + 4, WALL_Z), scale(SCRATCH, 0.6));
+  }
+
+  // Hind legs dangling, feet turned to show white toe beans.
+  limb([[94, 232, 0.02], [89, 262, 0.02], [86, 284, 0.04]], (t) => 7 - t * 2);
+  limb([[134, 232, 0.02], [140, 262, 0.02], [143, 284, 0.04]], (t) => 7 - t * 2);
+  for (const cx of [86, 143]) {
+    blob(cx, 292, 10, 8, 7, 4, 8, 0.9);
+    const bean = (x: number, y: number, r: number) => {
+      const pts: V3[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        pts.push(px(x + Math.cos(a) * r, y + Math.sin(a) * r, 0.1));
+      }
+      lb.polyline(pts, false, WHITE_LINE);
+    };
+    for (const dx of [-6, -2, 2, 6]) bean(cx + dx, 290 + Math.abs(dx) * 0.4, 1.8);
+    bean(cx, 297, 3.6);
+  }
+
+  // Tail: straight down from the body, then a thick curl to the left.
+  limb(
+    [[111, 238, -0.02], [111, 256, -0.02], [115, 274, 0], [121, 290, 0.02], [126, 304, 0.03], [124, 318, 0.04], [114, 330, 0.05], [102, 336, 0.05], [96, 330, 0.05]],
+    (t) => 4 + Math.pow(t, 2) * 7,
+    0.8,
+  );
+  // Rounded end of the curl.
+  blob(110, 330, 16, 11, 10, 4, 10, 0.75);
 
   return lb.build();
 }
