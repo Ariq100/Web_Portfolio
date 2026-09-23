@@ -43,7 +43,7 @@ export const profile = {
   about: {
     /** README.md in about-me; blank lines start new paragraphs. */
     summary:
-      "Love to build software and algorithms that ships. Systems that scale.\n\nI'm ambitious. I work across the full stack, I still have a lot to learn, and I throw myself at every opportunity to learn it.",
+      "Love to build software and algorithms that ships. Systems that scale.\n\n I work across the full stack, I still have a lot to learn, and I throw myself at every opportunity to learn it.",
     details: [
       { key: 'name', value: 'Shadman Muhtasim Ariq' },
       { key: 'studying', value: 'Bachelor of Computer Science' },
