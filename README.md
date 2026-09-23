@@ -1,4 +1,4 @@
-# Ariq — 3D Portfolio
+# Ariq — Portfolio
 
 My personal portfolio, built as a macOS Terminal session you scroll through. Each section types its own commands and prints the output, while wireframe 3D models float behind the text and the cursor rips holes through the screen.
 
