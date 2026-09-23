@@ -41,7 +41,7 @@ interface Placement {
 }
 
 const PLACEMENTS: Placement[] = [
-  { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.52, y: 0.04, size: 0.62, opacity: 1, motion: 'portrait' },
+  { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.46, y: 0.06, size: 0.6, opacity: 1, motion: 'portrait' },
   { asset: 'sword', section: 'about', color: WHITE, x: 0.64, y: 0, size: 0.7, opacity: 0.85, motion: 'blade', rotation: [0, 0, -0.18] },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
   { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0], textDim: 0.06 },
