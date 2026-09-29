@@ -2,11 +2,13 @@ import { useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { motion } from '../motion';
+import { useBoot } from '../boot';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { assets, type AssetName } from '../three/assets';
 import { createPhotoMaterial, createPhotoPlane } from '../three/photoPoints';
 import { tearSurface } from './TearCanvas';
 import { textCoverage } from '../three/textCover';
+import { clamp, smooth } from '../scroll';
 
 const CAMERA_Z = 8;
 const FOV = 50;
@@ -21,6 +23,8 @@ interface Placement {
   /** `photo` renders a coloured particle portrait instead of wireframe lines. */
   kind?: 'lines' | 'photo';
   section: string;
+  /** Viewport-anchored models fade in at their final position. */
+  anchor?: 'section' | 'viewport';
   color: string;
   /** Horizontal position as a fraction of the half-viewport width (-1 left, 1 right). */
   x: number;
@@ -46,13 +50,13 @@ const PLACEMENTS: Placement[] = [
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
   { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0], textDim: 0.06 },
   // y is downward: the Porsche sits above the LFA in the right-hand column.
-  { asset: 'porsche', section: 'contact', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0], textDim: 0.03 },
-  { asset: 'lfa', section: 'contact', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0], textDim: 0.03 },
+  { asset: 'porsche', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0], textDim: 0.03 },
+  { asset: 'lfa', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0], textDim: 0.03 },
 ];
 
 const halfHeightAt = (z: number) => Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * (CAMERA_Z - z);
 
-const ASSEMBLE_SECONDS = 2.4;
+const PORTRAIT_REVEAL_SECONDS = 1.8;
 /** Opacity multiplier for a model that sits behind text. */
 const TEXT_DIM = 0.1;
 
@@ -62,8 +66,10 @@ function Anchored({ p }: { p: Placement }) {
   const inner = useRef<THREE.Group>(null);
   const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
   const opacity = useRef(0);
+  // Only the fresh-load entrance uses time; scrolling never resets it.
   const assembled = useRef(0);
   const { size, gl, camera } = useThree();
+  const { booted } = useBoot();
   const reduced = useReducedMotion();
   const geometry = assets[p.asset];
   const baseColor = useMemo(() => new THREE.Color(p.color), [p.color]);
@@ -94,7 +100,7 @@ function Anchored({ p }: { p: Placement }) {
   }, [geometry, photoPlane]);
   const cover = useRef(0);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const g = group.current;
     const el = document.getElementById(p.section);
     if (!g || !inner.current || !el) return;
@@ -104,20 +110,27 @@ function Anchored({ p }: { p: Placement }) {
     const worldPerPx = (2 * hh) / size.height;
     const narrow = size.width < size.height * 0.9;
     const rect = el.getBoundingClientRect();
+    const fixedPosition = p.anchor === 'viewport';
+    const travel = reduced ? 0.5 : clamp((size.height - rect.top) / (rect.height + size.height));
+    const entrance = reduced ? 1 : smooth((size.height * 0.9 - rect.top) / (size.height * 0.65));
     // Sticky: hold the model in view while its section is on screen, then scroll away with it.
     const desired = size.height * (0.5 + (p.y ?? 0));
     const lo = rect.top + size.height * 0.35;
     const hi = rect.bottom - size.height * 0.35;
-    const anchorY = lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, desired));
+    // The cars keep their separate vertical slots, even as contact enters view.
+    const anchorY = fixedPosition ? desired : lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, desired));
 
     g.position.set(
-      (narrow ? p.x * 0.45 : p.x) * hh * (size.width / size.height),
+      ((narrow ? p.x * 0.45 : p.x) + (reduced || fixedPosition ? 0 : (1 - entrance) * Math.sign(p.x) * 0.25
+        + (travel - 0.5) * 0.12)) * hh * (size.width / size.height),
       -(anchorY - size.height / 2) * worldPerPx,
       z,
     );
-    g.scale.setScalar(p.size * 2 * hh * (narrow ? 0.75 : 1));
+    g.scale.setScalar(p.size * 2 * hh * (narrow ? 0.75 : 1) * (fixedPosition ? 1 : 0.78 + entrance * 0.22));
 
-    const t = state.clock.elapsedTime;
+    const turn = (travel - 0.5) * Math.PI * 2;
+    const mx = reduced ? 0 : motion.mx;
+    const my = reduced ? 0 : motion.my;
     const [rx, ry, rz] = p.rotation ?? [0, 0, 0];
     const r = inner.current.rotation;
     switch (p.motion) {
@@ -126,17 +139,16 @@ function Anchored({ p }: { p: Placement }) {
         r.set(rx, ry, rz);
         break;
       case 'blade':
-        // Stands tilted, slowly turning so the slab of the blade catches the eye.
-        r.set(rx + motion.my * 0.1, ry + t * 0.35 + motion.mx * 0.5, rz);
+        r.set(rx + my * 0.1, ry + turn * 0.85 + mx * 0.5, rz + (travel - 0.5) * 0.3);
         break;
       case 'spin':
-        r.set(rx + t * 0.4 + motion.my * 0.4, ry + t * 0.7 + motion.mx * 0.6, rz);
+        r.set(rx + turn * 0.7 + my * 0.4, ry + turn * 1.4 + mx * 0.6, rz);
         break;
       case 'turntable':
-        r.set(rx + motion.my * 0.1, ry + t * 0.25 + motion.mx * 0.4, rz);
+        r.set(rx + my * 0.1, ry + turn * 0.8 + mx * 0.4, rz);
         break;
       case 'sway':
-        r.set(rx + motion.my * 0.12, ry + Math.sin(t * 0.5) * 0.45 + motion.mx * 0.5, rz);
+        r.set(rx + my * 0.12, ry + Math.sin(turn) * 0.6 + mx * 0.5, rz);
         break;
     }
 
@@ -148,24 +160,28 @@ function Anchored({ p }: { p: Placement }) {
     if (bounds) {
       inner.current.updateWorldMatrix(true, false);
       const c = textCoverage(inner.current, bounds, camera, size.width, size.height);
-      cover.current += (c - cover.current) * 0.15;
+      cover.current = c;
     }
     const behindText = THREE.MathUtils.smoothstep(cover.current, 0.004, 0.035);
     const target = presence * (p.opacity ?? 0.6) * THREE.MathUtils.lerp(1, p.textDim ?? TEXT_DIM, behindText);
-    opacity.current += (target - opacity.current) * 0.08;
+    opacity.current = target;
     g.visible = opacity.current > 0.01;
     if (lineMaterial.current) lineMaterial.current.opacity = opacity.current;
 
     if (photoMaterial && photoPlane) {
       const u = photoMaterial.uniforms;
       const pu = photoPlane.material.uniforms;
-      // Fly together on load; blow apart into dust as the section scrolls away.
-      assembled.current = reduced ? 1 : Math.min(1, assembled.current + delta / ASSEMBLE_SECONDS);
-      const progress = Math.min(assembled.current, 0.25 + 0.75 * presence);
+      // Assemble once after the boot overlay is gone, even without scrolling.
+      // Cap long frames so returning from a background tab doesn't skip the entrance.
+      if (booted) {
+        assembled.current = reduced ? 1 : Math.min(1, assembled.current + Math.min(delta, 0.1) / PORTRAIT_REVEAL_SECONDS);
+      }
+      // Scatter as home leaves the viewport; returning to the top restores the solid photo.
+      const progress = reduced ? 1 : Math.min(assembled.current, 0.25 + 0.75 * presence);
       // Hand over from tiles to the sharp photo as the last tiles land.
       const sharp = THREE.MathUtils.smoothstep(progress, 0.9, 1);
       u.uProgress.value = progress;
-      u.uTime.value = t;
+      u.uTime.value = travel * 12;
       u.uOpacity.value = opacity.current * (1 - sharp);
       u.uResY.value = size.height * gl.getPixelRatio();
       pu.uOpacity.value = opacity.current * sharp;
@@ -242,14 +258,13 @@ function BitField({ count = 900 }: { count?: number }) {
 }
 
 export function Scene3D() {
-  const reduced = useReducedMotion();
   return (
     <div className="scene" aria-hidden="true">
       <Canvas
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         camera={{ position: [0, 0, CAMERA_Z], fov: FOV }}
-        frameloop={reduced ? 'demand' : 'always'}
+        frameloop="always"
       >
         <BitField />
         {PLACEMENTS.map((p) => (

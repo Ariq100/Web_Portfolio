@@ -1,3 +1,5 @@
+import { clamp, introProgress, smooth } from './scroll';
+
 /**
  * Mutable pointer/scroll state shared by the 3D scene, the tear canvas and CSS.
  * Kept outside React so per-frame updates never trigger re-renders.
@@ -23,6 +25,8 @@ export function startMotionLoop(): () => void {
   if (started) return () => {};
   started = true;
   const root = document.documentElement;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('.panel'));
 
   const onPointer = (e: PointerEvent) => {
     motion.x = e.clientX;
@@ -43,13 +47,17 @@ export function startMotionLoop(): () => void {
     root.style.setProperty('--my', motion.my.toFixed(4));
     root.style.setProperty('--scroll', motion.scroll.toFixed(4));
 
-    // Scroll-linked 3D entrance for every element marked with data-depth.
+    // Measure stable sections rather than the content being transformed.
     const vh = window.innerHeight;
-    document.querySelectorAll<HTMLElement>('[data-depth]').forEach((el) => {
-      const r = el.getBoundingClientRect();
-      // 0 when the top of the element is at the bottom of the viewport, 1 once it reaches 35% height.
-      const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.65)));
-      el.style.setProperty('--p', p.toFixed(4));
+    panels.forEach((panel) => {
+      const r = panel.getBoundingClientRect();
+      const p = reduced.matches ? 1 : smooth((vh * 0.9 - r.top) / (vh * 0.45));
+      panel.style.setProperty('--p', p.toFixed(4));
+      if (panel.id === 'home') {
+        const nav = parseFloat(getComputedStyle(root).getPropertyValue('--nav-h'));
+        const intro = introProgress(window.scrollY, r.top + window.scrollY, r.height, vh, nav);
+        panel.style.setProperty('--intro-exit', String(reduced.matches ? 0 : smooth(clamp((intro - 0.8) / 0.2))));
+      }
     });
     raf = requestAnimationFrame(tick);
   };

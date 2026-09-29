@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { profile } from '../data/profile';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 export interface NavSection {
   id: string;
@@ -9,7 +10,7 @@ export interface NavSection {
 
 interface Props {
   sections: NavSection[];
-  /** Hidden during boot; slides in while the name decodes. */
+  /** Hidden until the actual assets are ready. */
   visible: boolean;
 }
 
@@ -18,6 +19,7 @@ interface Props {
  * The title follows the "current directory", and number keys switch tabs.
  */
 export function TerminalNav({ sections, visible }: Props) {
+  const reduced = useReducedMotion();
   const [active, setActive] = useState(sections[0].id);
   const [progress, setProgress] = useState(0);
   const [size, setSize] = useState({ cols: 80, rows: 24 });
@@ -54,7 +56,7 @@ export function TerminalNav({ sections, visible }: Props) {
   const go = (s: NavSection) => {
     setFlash(`cd ${s.path}`);
     window.setTimeout(() => setFlash(null), 1100);
-    document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(s.id)?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
   };
 
   useEffect(() => {

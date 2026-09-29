@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
-import { TerminalSession, type Step } from '../components/TerminalSession';
-import { useInView } from '../hooks/useInView';
+import type { Step } from '../components/TerminalSession';
+import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
 
 export function Contact() {
-  const [ref, inView] = useInView<HTMLElement>(0.3);
   const width = Math.max(...profile.contact.map((c) => c.label.length));
 
   const steps = useMemo<Step[]>(
@@ -37,12 +36,12 @@ export function Contact() {
   );
 
   return (
-    <section id="contact" ref={ref} className="panel panel-contact" aria-label="Contact">
+    <section id="contact" className="panel panel-contact" aria-label="Contact">
       <div className="window" data-depth>
         <h2 className="section-tag">
           <span className="c-dim">##</span> contact
         </h2>
-        <TerminalSession steps={steps} start={inView} finalCwd="~/contact" lineDelay={160} />
+        <ScrollTerminalSession steps={steps} finalCwd="~/contact" />
       </div>
       <footer className="footer c-dim">
         © {new Date().getFullYear()} {profile.name} · built with React, TypeScript &amp; three.js · [Process completed]

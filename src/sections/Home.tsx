@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
-import { TerminalSession, type Step } from '../components/TerminalSession';
+import type { Step } from '../components/TerminalSession';
+import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { BigName } from '../components/BigName';
 import { profile } from '../data/profile';
 import { formatLogin, login } from '../lastLogin';
-import { useBoot } from '../boot';
 
 export function Home() {
-  const { booted } = useBoot();
   const steps = useMemo<Step[]>(
     () => [
       {
@@ -45,15 +44,17 @@ export function Home() {
 
   return (
     <section id="home" className="panel panel-home" aria-label="Home">
-      <div className="window" data-depth>
-        {booted && <p className="line c-dim login-line">{formatLogin(login)}</p>}
-        <TerminalSession steps={steps} start={booted} finalCwd="~" lineDelay={160} />
-        <a className={`scroll-hint${booted ? '' : ' is-hidden'}`} href="#about">
-          <span className="c-dim">scroll to</span> <span className="c-green">cd ./about-me</span>
+      <div className="home-stage">
+      <div className="window">
+        <p className="line c-dim login-line">{formatLogin(login)}</p>
+        <ScrollTerminalSession steps={steps} finalCwd="~" intro />
+        <a className="scroll-hint" href="#about">
+          <span className="c-dim">scroll to explore</span> <span className="c-green">cd ./about-me</span>
           <span className="scroll-arrow" aria-hidden="true">
             ↓
           </span>
         </a>
+      </div>
       </div>
     </section>
   );
