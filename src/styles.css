@@ -132,7 +132,7 @@ p {
   pointer-events: none;
 }
 
-/* Revealed while the name decodes: bar drops in, then lights and tabs cascade. */
+/* Navigation becomes available as soon as the real assets are ready. */
 .titlebar-wrap.is-visible {
   pointer-events: auto;
   animation: nav-drop 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15) forwards;
@@ -316,6 +316,8 @@ p {
 /* ---------- panels ---------- */
 
 .panel {
+  --p: 1;
+  position: relative;
   min-height: calc(100vh - var(--nav-h));
   padding: 64px 24px;
   display: flex;
@@ -325,18 +327,9 @@ p {
 }
 
 .window {
-  --p: 1;
   width: 100%;
   max-width: 940px;
   margin: 0 auto;
-  transform-style: preserve-3d;
-  transform:
-    rotateX(calc((1 - var(--p)) * 22deg + var(--my) * -2.5deg))
-    rotateY(calc(var(--mx) * 3.5deg))
-    translateY(calc((1 - var(--p)) * 90px))
-    translateZ(calc((1 - var(--p)) * -160px));
-  opacity: calc(0.15 + var(--p) * 0.85);
-  will-change: transform;
 }
 
 .section-tag {
@@ -346,6 +339,8 @@ p {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--yellow);
+  transform: translateX(calc((1 - var(--p)) * -36px));
+  opacity: var(--p);
 }
 
 .line {
@@ -356,6 +351,86 @@ p {
 
 .line.out {
   animation: print 0.18s ease-out both;
+}
+
+/* Stable layout anchors; only their inner content moves. No timed transitions. */
+.scroll-session {
+  padding-bottom: var(--scroll-runway, 0px);
+}
+
+.scroll-session-content {
+  display: flow-root;
+  transform: translate3d(0, var(--session-offset, 0px), 0);
+}
+
+.scroll-row {
+  position: relative;
+  --reveal: 0;
+}
+
+.scroll-row-content {
+  opacity: var(--reveal);
+  transform: perspective(1000px)
+    translate3d(calc((1 - var(--reveal)) * -22px), calc((1 - var(--reveal)) * 54px), 0)
+    rotateX(calc((1 - var(--reveal)) * 7deg))
+    scale(calc(0.96 + var(--reveal) * 0.04));
+  transform-origin: center top;
+}
+
+.scroll-row:has(.project):nth-child(even) .scroll-row-content {
+  transform: translate3d(calc((1 - var(--reveal)) * 64px), calc((1 - var(--reveal)) * 60px), 0)
+    rotate(calc((1 - var(--reveal)) * 2deg)) scale(calc(0.94 + var(--reveal) * 0.06));
+}
+
+.scroll-row[data-revealed='false'] {
+  pointer-events: none;
+}
+
+/* Hidden visual output stays available to screen readers and keyboard navigation. */
+.scroll-row:focus-within .scroll-row-content {
+  opacity: 1;
+  transform: none;
+}
+
+.scroll-session .line.out {
+  animation: none;
+}
+
+.scroll-command {
+  display: inline-block;
+  vertical-align: bottom;
+  clip-path: inset(0 calc((1 - var(--typed, 1)) * 100%) 0 0);
+}
+
+.session-load {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+  margin-bottom: 24px;
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.session-load-track {
+  flex: 1;
+  height: 3px;
+  background: var(--hairline);
+}
+
+.session-load-track > span {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  transform: scaleX(var(--loaded, 0));
+  transform-origin: left;
+  box-shadow: 0 0 10px #32d74b66;
+}
+
+.session-load-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--green);
 }
 
 @keyframes print {
@@ -379,11 +454,27 @@ p {
 
 /* ---------- home ---------- */
 
+.panel-home {
+  display: block;
+  min-height: 220svh;
+  padding: 0;
+  perspective: none;
+  --intro-exit: 0;
+}
+
+.home-stage {
+  position: sticky;
+  top: var(--nav-h);
+  min-height: calc(100svh - var(--nav-h));
+  display: flex;
+  align-items: center;
+  padding: 48px 24px;
+}
+
 .panel-home .window {
-  transform:
-    rotateX(calc(var(--my) * -4deg + var(--scroll) * 60deg))
-    rotateY(calc(var(--mx) * 6deg))
-    translateZ(calc(var(--scroll) * -400px));
+  transform: translate3d(calc(var(--intro-exit) * -60px), calc(var(--intro-exit) * -24px), 0)
+    scale(calc(1 - var(--intro-exit) * 0.07));
+  transform-origin: left center;
 }
 
 .bigname {
@@ -737,6 +828,8 @@ body.is-booting {
   :root { --nav-h: 70px; }
   body { font-size: 13.5px; }
   .panel { padding: 48px 16px; }
+  .panel-home { padding: 0; }
+  .home-stage { padding: 32px 16px; }
   .title-extra,
   .tab-key { display: none; }
   .titlebar { padding: 0 10px; }
@@ -745,19 +838,43 @@ body.is-booting {
   .tab.active .tab-label::before { margin-right: 5px; }
   .kv { white-space: pre-wrap; }
   .project-name { font-size: 16px; }
+  .project-head { flex-wrap: wrap; }
+  .project-when { margin-left: 0; }
+  .scroll-row-content,
+  .scroll-row:has(.project):nth-child(even) .scroll-row-content {
+    transform: translateY(calc((1 - var(--reveal)) * 32px));
+  }
+}
+
+/* A tall intro must remain reachable on short/landscape viewports. */
+@media (max-height: 700px) {
+  .panel-home { min-height: calc(100svh - var(--nav-h)); }
+  .home-stage { position: relative; top: auto; }
+  .panel-home .window { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .window,
   .panel-home .window,
-  .bigname-inner {
+  .bigname-inner,
+  .section-tag,
+  .scroll-session-content,
+  .scroll-row-content,
+  .scroll-row:has(.project):nth-child(even) .scroll-row-content {
     transform: none !important;
     opacity: 1 !important;
   }
   .line.out,
   .scroll-arrow,
+  .cursor,
+  .bigname-inner::after,
   .boot-exit { animation: none; }
+  .scroll-command { clip-path: none; }
+  .session-load { display: none; }
+  .scroll-session { padding-bottom: 0; }
+  .panel-home { min-height: calc(100svh - var(--nav-h)); }
+  .home-stage { position: relative; top: auto; }
   .titlebar-wrap.is-visible,
   .titlebar-wrap.is-visible * { animation-duration: 0.01s !important; animation-delay: 0s !important; }
 }

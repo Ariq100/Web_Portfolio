@@ -10,9 +10,9 @@ export interface BootState {
   progress: number;
   /** All loading finished; the loader plays its exit animation. */
   ready: boolean;
-  /** Loader is gone and the home session starts typing. */
+  /** Assets are ready and the scroll experience is visible. */
   booted: boolean;
-  /** The nav bar has been revealed (happens while the name decodes). */
+  /** The nav bar is visible once the assets are ready. */
   navVisible: boolean;
 }
 
@@ -34,11 +34,6 @@ export function useBoot() {
   );
 }
 
-export function showNav() {
-  if (!state.navVisible) set({ navVisible: true });
-}
-
-const MIN_DURATION = 1800;
 const EXIT_DURATION = 650;
 let started = false;
 
@@ -46,10 +41,8 @@ let started = false;
 export async function runBoot() {
   if (started) return;
   started = true;
-  const t0 = performance.now();
 
   const tasks: { label: string; run: () => Promise<unknown> }[] = [
-    { label: 'mounting /dev/portfolio', run: () => new Promise((r) => setTimeout(r, 250)) },
     { label: 'loading fonts', run: () => document.fonts.ready },
   ];
   // three.js and the model builders live in a separate chunk.
@@ -86,9 +79,7 @@ export async function runBoot() {
   const total = tasks.length + assetTasks.length;
   for (let i = 0; i < assetTasks.length; i++) await runTask(tasks.length + i, assetTasks[i], total);
 
-  const elapsed = performance.now() - t0;
-  if (elapsed < MIN_DURATION) await new Promise((r) => setTimeout(r, MIN_DURATION - elapsed));
   set({ ready: true, progress: 1 });
   await new Promise((r) => setTimeout(r, EXIT_DURATION));
-  set({ booted: true });
+  set({ booted: true, navVisible: true });
 }

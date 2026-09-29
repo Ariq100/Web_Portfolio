@@ -1,11 +1,9 @@
 import { useMemo } from 'react';
-import { TerminalSession, type Step } from '../components/TerminalSession';
-import { useInView } from '../hooks/useInView';
+import type { Step } from '../components/TerminalSession';
+import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
 
 export function Projects() {
-  const [ref, inView] = useInView<HTMLElement>(0.25);
-
   const steps = useMemo<Step[]>(
     () => [
       { cwd: '~/about-me', command: 'cd ../projects' },
@@ -60,12 +58,12 @@ export function Projects() {
   );
 
   return (
-    <section id="projects" ref={ref} className="panel" aria-label="Projects">
+    <section id="projects" className="panel" aria-label="Projects">
       <div className="window" data-depth>
         <h2 className="section-tag">
           <span className="c-dim">##</span> projects
         </h2>
-        <TerminalSession steps={steps} start={inView} finalCwd="~/projects" lineDelay={140} />
+        <ScrollTerminalSession steps={steps} finalCwd="~/projects" />
       </div>
     </section>
   );

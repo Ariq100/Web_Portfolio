@@ -29,7 +29,7 @@ function currentTextRects(now: number) {
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (!node.nodeValue?.trim()) continue;
     const parent = node.parentElement;
-    if (!parent || parent.closest('.sr-only')) continue;
+    if (!parent || parent.closest('.sr-only, .scroll-row[data-revealed="false"]')) continue;
     range.selectNodeContents(node);
     // One rect per wrapped line, so empty space beside short lines is not counted.
     for (const r of range.getClientRects()) {

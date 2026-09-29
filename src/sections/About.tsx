@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
-import { TerminalSession, type Step } from '../components/TerminalSession';
-import { useInView } from '../hooks/useInView';
+import type { Step } from '../components/TerminalSession';
+import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
 
 export function About() {
-  const [ref, inView] = useInView<HTMLElement>(0.3);
   const width = Math.max(...profile.about.details.map((d) => d.key.length));
 
   const steps = useMemo<Step[]>(
@@ -79,12 +78,12 @@ export function About() {
   );
 
   return (
-    <section id="about" ref={ref} className="panel" aria-label="About me">
+    <section id="about" className="panel" aria-label="About me">
       <div className="window" data-depth>
         <h2 className="section-tag">
           <span className="c-dim">##</span> about-me
         </h2>
-        <TerminalSession steps={steps} start={inView} finalCwd="~/about-me" lineDelay={110} />
+        <ScrollTerminalSession steps={steps} finalCwd="~/about-me" />
       </div>
     </section>
   );
