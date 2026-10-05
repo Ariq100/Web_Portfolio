@@ -1,6 +1,6 @@
 # Ariq — Portfolio
 
-My personal portfolio, built as a macOS Terminal session you scroll through. The portrait assembles once on a fresh page load and stays solid at the top. Scroll position types commands, reveals output, scatters the portrait as home leaves view and turns the wireframe models. Stop scrolling to hold a frame; scroll back to reverse it. The cursor rips holes through the screen.
+My personal portfolio, built as a macOS Terminal session. A two-second minimum boot sequence leads into an automatic home entrance: the name decodes, commands type, fun facts print and the portrait assembles. From About me onward, scrolling grows stars into large wireframe headings, types commands, reveals output and turns the models. Stop scrolling to hold a frame; scroll back to reverse it. The cursor rips holes through the screen.
 
 **Live:** [ariq100.vercel.app](https://ariq100.vercel.app/)
 

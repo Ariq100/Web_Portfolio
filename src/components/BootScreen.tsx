@@ -11,12 +11,14 @@ export function BootScreen() {
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
+    if (booted) return;
     const id = window.setInterval(() => setFrame((f) => f + 1), 80);
     return () => window.clearInterval(id);
-  }, []);
+  }, [booted]);
 
   // Ease the displayed percentage toward the real one.
   useEffect(() => {
+    if (booted) return;
     let raf = 0;
     const tick = () => {
       setShown((s) => {
@@ -27,7 +29,7 @@ export function BootScreen() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [progress]);
+  }, [progress, booted]);
 
   useEffect(() => {
     document.body.classList.toggle('is-booting', !booted);

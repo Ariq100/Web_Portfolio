@@ -28,26 +28,26 @@ const STEEL = {
 
 export const assetTasks: AssetTask[] = [
   {
-    label: 'loading home_me photo',
+    label: 'fetching home page',
     run: async () => {
       assets.me = await photoPoints('/images/home_me_web.webp', { width: 150 });
     },
   },
   {
-    label: 'loading berserk sword model',
+    label: 'fetching about me',
     run: async () => {
       assets.sword = await loadWireModel('/models/sword.bin', { ...STEEL, body: [0.74, 0.78, 0.86] });
     },
   },
   {
-    label: 'stitching football',
+    label: 'fetching his passion and enthusiasm',
     run: async () => {
       await nextFrame();
       assets.ball = football();
     },
   },
   {
-    label: 'loading cat model',
+    label: 'collecting a few fun facts',
     run: async () => {
       assets.cat = await loadWireModel('/models/cat.bin', {
         ...STEEL,
@@ -58,7 +58,7 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'loading porsche 930 turbo model',
+    label: 'fetching projects and big ideas',
     run: async () => {
       assets.porsche = await loadWireModel('/models/porsche930.bin', {
         body: [0.66, 0.68, 0.74],
@@ -76,7 +76,7 @@ export const assetTasks: AssetTask[] = [
     },
   },
   {
-    label: 'loading lexus lfa model',
+    label: 'making connections',
     run: async () => {
       assets.lfa = await loadWireModel('/models/lfa.bin', {
         body: [0.78, 0.8, 0.86],

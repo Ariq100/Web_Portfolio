@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Step } from '../components/TerminalSession';
 import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
+import { WireframeTitle } from '../components/WireframeTitle';
 
 export function Contact() {
   const width = Math.max(...profile.contact.map((c) => c.label.length));
@@ -38,9 +39,7 @@ export function Contact() {
   return (
     <section id="contact" className="panel panel-contact" aria-label="Contact">
       <div className="window" data-depth>
-        <h2 className="section-tag">
-          <span className="c-dim">##</span> contact
-        </h2>
+        <WireframeTitle text="Contact" />
         <ScrollTerminalSession steps={steps} finalCwd="~/contact" />
       </div>
       <footer className="footer c-dim">

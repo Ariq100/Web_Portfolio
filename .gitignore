@@ -8,3 +8,9 @@ conversation.txt
 DOCUMENTATION.md
 .vercel
 .env*
+
+# Local-only Obsidian vault settings, graph notes and sync tools
+.obsidian/
+Project Map/
+tools/obsidian-project-map/
+.vscode/

@@ -1,4 +1,4 @@
-import { clamp, introProgress, smooth } from './scroll';
+import { smooth } from './scroll';
 
 /**
  * Mutable pointer/scroll state shared by the 3D scene, the tear canvas and CSS.
@@ -53,11 +53,6 @@ export function startMotionLoop(): () => void {
       const r = panel.getBoundingClientRect();
       const p = reduced.matches ? 1 : smooth((vh * 0.9 - r.top) / (vh * 0.45));
       panel.style.setProperty('--p', p.toFixed(4));
-      if (panel.id === 'home') {
-        const nav = parseFloat(getComputedStyle(root).getPropertyValue('--nav-h'));
-        const intro = introProgress(window.scrollY, r.top + window.scrollY, r.height, vh, nav);
-        panel.style.setProperty('--intro-exit', String(reduced.matches ? 0 : smooth(clamp((intro - 0.8) / 0.2))));
-      }
     });
     raf = requestAnimationFrame(tick);
   };

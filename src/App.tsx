@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { TearCanvas } from './components/TearCanvas';
 import { TerminalNav, type NavSection } from './components/TerminalNav';
 import { Home } from './sections/Home';
@@ -46,6 +47,7 @@ export default function App() {
         <Projects />
         <Contact />
       </main>
+      <Analytics />
     </>
   );
 }

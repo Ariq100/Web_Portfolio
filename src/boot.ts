@@ -35,18 +35,20 @@ export function useBoot() {
 }
 
 const EXIT_DURATION = 650;
+const MIN_LOADING_DURATION = 2000;
 let started = false;
 
 /** Runs every loading task in order, reporting progress to the boot screen. */
 export async function runBoot() {
   if (started) return;
   started = true;
+  const startedAt = performance.now();
 
   const tasks: { label: string; run: () => Promise<unknown> }[] = [
-    { label: 'loading fonts', run: () => document.fonts.ready },
+    { label: 'fetching data', run: () => document.fonts.ready },
   ];
   // three.js and the model builders live in a separate chunk.
-  const threeTask = { label: 'loading three.js', run: async () => {} };
+  const threeTask = { label: 'life is too large, so using Git LFS', run: async () => {} };
   tasks.push(threeTask);
 
   set({ steps: tasks.map((t) => ({ label: t.label, status: 'pending' })) });
@@ -60,6 +62,9 @@ export async function runBoot() {
       ok = false;
       console.error(err);
     }
+    // Pace cached loads too, without adding a full delay after a slow download.
+    const remaining = startedAt + ((index + 1) / total) * MIN_LOADING_DURATION - performance.now();
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
     set({
       steps: state.steps.map((s, i) => (i === index ? { ...s, status: ok ? 'done' : 'failed' } : s)),
       progress: (index + 1) / total,

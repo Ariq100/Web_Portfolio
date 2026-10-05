@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Step } from '../components/TerminalSession';
 import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
+import { WireframeTitle } from '../components/WireframeTitle';
 
 export function Projects() {
   const steps = useMemo<Step[]>(
@@ -60,9 +61,7 @@ export function Projects() {
   return (
     <section id="projects" className="panel" aria-label="Projects">
       <div className="window" data-depth>
-        <h2 className="section-tag">
-          <span className="c-dim">##</span> projects
-        </h2>
+        <WireframeTitle text="Projects" />
         <ScrollTerminalSession steps={steps} finalCwd="~/projects" />
       </div>
     </section>
