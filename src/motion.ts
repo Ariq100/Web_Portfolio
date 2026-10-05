@@ -53,6 +53,13 @@ export function startMotionLoop(): () => void {
       const r = panel.getBoundingClientRect();
       const p = reduced.matches ? 1 : smooth((vh * 0.9 - r.top) / (vh * 0.45));
       panel.style.setProperty('--p', p.toFixed(4));
+      if (panel.id === 'home') {
+        // Finish the automatic intro first. Then scrub the exit as home leaves
+        // the viewport; scrolling back restores it without replaying the typing.
+        const exit = reduced.matches || panel.dataset.homeReady !== 'true'
+          ? 0 : smooth((vh - r.bottom) / (vh * 0.85));
+        panel.style.setProperty('--home-exit', exit.toFixed(4));
+      }
     });
     raf = requestAnimationFrame(tick);
   };

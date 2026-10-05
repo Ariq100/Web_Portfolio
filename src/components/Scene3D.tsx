@@ -155,6 +155,11 @@ function Anchored({ p }: { p: Placement }) {
     // Fade by how much of the viewport the section fills, so neighbours cross-fade.
     const coverage = Math.max(0, Math.min(rect.bottom, size.height) - Math.max(rect.top, 0)) / size.height;
     const presence = THREE.MathUtils.smoothstep(coverage, 0.2, 0.6);
+    // The cars belong to the contact content, not its preceding title stage.
+    // Wait until that heading leaves the viewport, including when scrolling back.
+    const heading = fixedPosition ? el.previousElementSibling?.querySelector('.wireframe-title') : null;
+    const titleClearance = heading
+      ? smooth(-heading.getBoundingClientRect().bottom / (size.height * 0.18)) : 1;
     // Fade whenever text sits over the model (phones, narrow windows, long lines), so
     // the words stay readable; full strength again once it is clear of the text.
     if (bounds) {
@@ -163,7 +168,7 @@ function Anchored({ p }: { p: Placement }) {
       cover.current = c;
     }
     const behindText = THREE.MathUtils.smoothstep(cover.current, 0.004, 0.035);
-    const target = presence * (p.opacity ?? 0.6) * THREE.MathUtils.lerp(1, p.textDim ?? TEXT_DIM, behindText);
+    const target = presence * titleClearance * (p.opacity ?? 0.6) * THREE.MathUtils.lerp(1, p.textDim ?? TEXT_DIM, behindText);
     opacity.current = target;
     g.visible = opacity.current > 0.01;
     if (lineMaterial.current) lineMaterial.current.opacity = opacity.current;

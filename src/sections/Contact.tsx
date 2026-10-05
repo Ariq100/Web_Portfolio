@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Step } from '../components/TerminalSession';
 import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
-import { WireframeTitle } from '../components/WireframeTitle';
+import { SectionHeading } from '../components/WireframeTitle';
 
 export function Contact() {
   const width = Math.max(...profile.contact.map((c) => c.label.length));
@@ -37,14 +37,16 @@ export function Contact() {
   );
 
   return (
+    <>
+    <SectionHeading text="Contact" />
     <section id="contact" className="panel panel-contact" aria-label="Contact">
       <div className="window" data-depth>
-        <WireframeTitle text="Contact" />
         <ScrollTerminalSession steps={steps} finalCwd="~/contact" />
       </div>
       <footer className="footer c-dim">
         © {new Date().getFullYear()} {profile.name} · built with React, TypeScript &amp; three.js · [Process completed]
       </footer>
     </section>
+    </>
   );
 }

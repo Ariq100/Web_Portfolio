@@ -35,7 +35,7 @@ export function useBoot() {
 }
 
 const EXIT_DURATION = 650;
-const MIN_LOADING_DURATION = 2000;
+const MIN_LOADING_DURATION = 1000;
 let started = false;
 
 /** Runs every loading task in order, reporting progress to the boot screen. */

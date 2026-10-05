@@ -16,6 +16,8 @@ interface Props {
   finalCwd: string;
   typeDelay?: number;
   lineDelay?: number;
+  /** Called after every command and output line has finished appearing. */
+  onComplete?: () => void;
 }
 
 type Phase = 'typing' | 'output' | 'done';
@@ -27,9 +29,13 @@ interface State {
   phase: Phase;
 }
 
-export function TerminalSession({ steps, start, finalCwd, typeDelay = 55, lineDelay = 90 }: Props) {
+export function TerminalSession({ steps, start, finalCwd, typeDelay = 55, lineDelay = 90, onComplete }: Props) {
   const reduced = useReducedMotion();
   const [s, setS] = useState<State>({ step: 0, chars: 0, lines: 0, phase: 'typing' });
+
+  useEffect(() => {
+    if (s.phase === 'done') onComplete?.();
+  }, [s.phase, onComplete]);
 
   useEffect(() => {
     if (!start || s.phase === 'done') return;

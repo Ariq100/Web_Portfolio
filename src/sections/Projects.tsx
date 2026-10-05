@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Step } from '../components/TerminalSession';
 import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
-import { WireframeTitle } from '../components/WireframeTitle';
+import { SectionHeading } from '../components/WireframeTitle';
 
 export function Projects() {
   const steps = useMemo<Step[]>(
@@ -59,11 +59,13 @@ export function Projects() {
   );
 
   return (
+    <>
+    <SectionHeading text="Projects" />
     <section id="projects" className="panel" aria-label="Projects">
       <div className="window" data-depth>
-        <WireframeTitle text="Projects" />
         <ScrollTerminalSession steps={steps} finalCwd="~/projects" />
       </div>
     </section>
+    </>
   );
 }

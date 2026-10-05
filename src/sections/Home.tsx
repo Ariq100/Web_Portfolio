@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { TerminalSession, type Step } from '../components/TerminalSession';
 import { BigName } from '../components/BigName';
 import { profile } from '../data/profile';
@@ -7,6 +7,8 @@ import { useBoot } from '../boot';
 
 export function Home() {
   const { booted } = useBoot();
+  const [complete, setComplete] = useState(false);
+  const handleComplete = useCallback(() => setComplete(true), []);
   const steps = useMemo<Step[]>(
     () => [
       {
@@ -44,12 +46,12 @@ export function Home() {
   );
 
   return (
-    <section id="home" className="panel panel-home" aria-label="Home">
+    <section id="home" className="panel panel-home" aria-label="Home" data-home-ready={complete}>
       <div className="home-stage">
       <div className="window">
         {booted && <p className="line c-dim login-line">{formatLogin(login)}</p>}
-        <TerminalSession steps={steps} start={booted} finalCwd="~" typeDelay={25} lineDelay={100} />
-        <a className={`scroll-hint${booted ? '' : ' is-hidden'}`} href="#about">
+        <TerminalSession steps={steps} start={booted} finalCwd="~" typeDelay={25} lineDelay={100} onComplete={handleComplete} />
+        <a className={`scroll-hint${complete ? '' : ' is-hidden'}`} href="#about">
           <span className="c-dim">scroll to explore</span> <span className="c-green">cd ./about-me</span>
           <span className="scroll-arrow" aria-hidden="true">
             ↓

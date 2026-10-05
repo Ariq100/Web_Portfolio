@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Step } from '../components/TerminalSession';
 import { ScrollTerminalSession } from '../components/ScrollTerminalSession';
 import { profile } from '../data/profile';
-import { WireframeTitle } from '../components/WireframeTitle';
+import { SectionHeading } from '../components/WireframeTitle';
 
 export function About() {
   const width = Math.max(...profile.about.details.map((d) => d.key.length));
@@ -79,11 +79,13 @@ export function About() {
   );
 
   return (
+    <>
+    <SectionHeading text="About me" />
     <section id="about" className="panel" aria-label="About me">
       <div className="window" data-depth>
-        <WireframeTitle text="About me" />
         <ScrollTerminalSession steps={steps} finalCwd="~/about-me" />
       </div>
     </section>
+    </>
   );
 }

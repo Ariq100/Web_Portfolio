@@ -59,6 +59,17 @@ function buildFrame(text: string) {
   };
 }
 
+/** A separate scroll interval between the previous section and the next panel. */
+export function SectionHeading({ text }: { text: string }) {
+  return (
+    <header className="section-heading">
+      <div className="window">
+        <WireframeTitle text={text} />
+      </div>
+    </header>
+  );
+}
+
 /** Scroll scrubs the entire assembly in both directions; stopping holds a frame. */
 export function WireframeTitle({ text }: { text: string }) {
   const ref = useRef<HTMLHeadingElement>(null);
