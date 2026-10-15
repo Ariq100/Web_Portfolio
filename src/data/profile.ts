@@ -23,7 +23,7 @@ export interface ContactLink {
 export interface Experience {
   role: string;
   org: string;
-  where: string;
+  where?: string;
   when: string;
   points: string[];
 }
@@ -54,11 +54,27 @@ export const profile = {
       { key: 'before', value: 'A levels in Computer Science, Physics & Maths, SFX Greenherald International School (Certificate for Honors, straight A’s)' },
     ],
     involvement: [
-      'Projects Team member, MNET (Monash Nexus Emerging Tech)',
       "Social Media Manager, gdgmonash (Google Developer's Club Monash)",
       'Hackathon Finalist, MelbourneHack (hosted by the University of Melbourne)',
+      'Participant, Macathon 2026 (hosted by the Monash Association of Coding)',
+      'Participant, Game Jam 2026 (hosted by the Monash Association of Coding)',
     ],
     experience: [
+      {
+        role: 'Software Developer',
+        org: 'Scoliome',
+        when: 'Oct 2026 – present',
+        points: [
+          'Building a scalable platform for scoliosis clinics, designed to support a large user base of clinicians, clinic teams and guardians.',
+          'Developing tools for clinicians to track patient progress, clinics to manage their clinicians, and guardians to follow their children’s care and communicate with clinicians.',
+        ],
+      },
+      {
+        role: 'Projects Team Member',
+        org: 'MNET (Monash Nexus Emerging Tech)',
+        when: 'Aug 2026 – present',
+        points: [],
+      },
       {
         role: 'Intern, Graphic Design',
         org: 'Holycity Developments Limited',

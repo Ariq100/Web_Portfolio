@@ -45,7 +45,7 @@ export function About() {
                 <span className="c-dim"> · {e.when}</span>
               </p>
               <p className="c-dim">
-                {e.org}, {e.where}
+                {e.org}{e.where ? `, ${e.where}` : ''}
               </p>
               {e.points.map((pt) => (
                 <p className="exp-point" key={pt}>
