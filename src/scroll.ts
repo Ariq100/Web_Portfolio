@@ -6,6 +6,13 @@ export const smooth = (value: number) => {
   return p * p * (3 - 2 * p);
 };
 
+/** Pin a model until its full projected bounds reach either edge of its section. */
+export function containedAnchor(desired: number, top: number, bottom: number, above: number, below: number) {
+  const first = top + above;
+  const last = bottom - below;
+  return first > last ? (first + last) / 2 : Math.min(last, Math.max(first, desired));
+}
+
 /** Read layout coordinates, never animated bounding boxes (which cause feedback). */
 export function layoutTop(element: HTMLElement): number {
   let top = 0;

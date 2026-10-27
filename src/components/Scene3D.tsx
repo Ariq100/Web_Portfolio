@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { motion } from '../motion';
@@ -7,8 +7,10 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { assets, type AssetName } from '../three/assets';
 import { createPhotoMaterial, createPhotoPlane } from '../three/photoPoints';
 import { tearSurface } from './TearCanvas';
-import { textCoverage } from '../three/textCover';
-import { clamp, smooth } from '../scroll';
+import { screenRect, textCoverage } from '../three/textCover';
+import { clamp, containedAnchor, smooth } from '../scroll';
+import { createWireReveal } from '../three/wireReveal';
+import { WIREFRAME_DRAW } from '../wireframeMotion';
 
 const CAMERA_Z = 8;
 const FOV = 50;
@@ -48,31 +50,39 @@ const PLACEMENTS: Placement[] = [
   { asset: 'me', kind: 'photo', section: 'home', color: WHITE, x: 0.46, y: 0.06, size: 0.6, opacity: 1, motion: 'portrait' },
   { asset: 'sword', section: 'about', color: WHITE, x: 0.64, y: 0, size: 0.7, opacity: 0.85, motion: 'blade', rotation: [0, 0, -0.18] },
   { asset: 'ball', section: 'about', color: WHITE, x: -0.78, y: 0.3, z: -1, size: 0.22, opacity: 0.8, motion: 'spin' },
-  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0], textDim: 0.06 },
+  { asset: 'cat', section: 'projects', color: WHITE, x: 0.83, y: 0.1, z: -1, size: 0.28, opacity: 0.85, motion: 'sway', rotation: [0.15, 2.6, 0], textDim: 0.02 },
   // y is downward: the Porsche sits above the LFA in the right-hand column.
-  { asset: 'porsche', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0], textDim: 0.03 },
-  { asset: 'lfa', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0], textDim: 0.03 },
+  { asset: 'porsche', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: -0.2, z: -1, size: 0.44, opacity: 0.7, motion: 'turntable', rotation: [0.2, 0.6, 0], textDim: 0.02 },
+  { asset: 'lfa', section: 'contact', anchor: 'viewport', color: WHITE, x: 0.56, y: 0.22, z: -1, size: 0.46, opacity: 0.6, motion: 'turntable', rotation: [0.2, 2.2, 0], textDim: 0.02 },
 ];
 
 const halfHeightAt = (z: number) => Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * (CAMERA_Z - z);
 
 const PORTRAIT_REVEAL_SECONDS = 1.8;
 /** Opacity multiplier for a model that sits behind text. */
-const TEXT_DIM = 0.1;
+const TEXT_DIM = 0.025;
 
 /** A model that tracks its section's on-screen position. */
 function Anchored({ p }: { p: Placement }) {
   const group = useRef<THREE.Group>(null);
   const inner = useRef<THREE.Group>(null);
-  const lineMaterial = useRef<THREE.LineBasicMaterial>(null);
   const opacity = useRef(0);
   // Only the fresh-load entrance uses time; scrolling never resets it.
   const assembled = useRef(0);
+  const wireReveal = useRef(0);
   const { size, gl, camera } = useThree();
   const { booted } = useBoot();
   const reduced = useReducedMotion();
   const geometry = assets[p.asset];
   const baseColor = useMemo(() => new THREE.Color(p.color), [p.color]);
+  const wireEffect = useMemo(() => p.kind !== 'photo' && geometry ? createWireReveal(geometry, baseColor) : null,
+    [p.kind, geometry, baseColor]);
+  useEffect(() => () => {
+    wireEffect?.geometry.dispose();
+    wireEffect?.material.dispose();
+    wireEffect?.sparkGeometry.dispose();
+    wireEffect?.sparkMaterial.dispose();
+  }, [wireEffect]);
   const photoMaterial = useMemo(
     () => (p.kind === 'photo' && geometry ? createPhotoMaterial(geometry) : null),
     [p.kind, geometry],
@@ -108,25 +118,54 @@ function Anchored({ p }: { p: Placement }) {
     const z = p.z ?? 0;
     const hh = halfHeightAt(z);
     const worldPerPx = (2 * hh) / size.height;
+    const mobile = size.width <= 720;
+    const mobilePortrait = mobile && p.kind === 'photo';
+    const mobileWire = mobile && p.kind !== 'photo';
     const narrow = size.width < size.height * 0.9;
     const rect = el.getBoundingClientRect();
-    const fixedPosition = p.anchor === 'viewport';
-    const travel = reduced ? 0.5 : clamp((size.height - rect.top) / (rect.height + size.height));
-    const entrance = reduced ? 1 : smooth((size.height * 0.9 - rect.top) / (size.height * 0.65));
+    const portraitSlot = mobilePortrait ? el.querySelector('.home-portrait-slot')?.getBoundingClientRect() : null;
+    const heading = el.previousElementSibling;
+    const modelSlot = mobileWire
+      ? heading?.querySelector(`[data-model-slot="${p.asset === 'ball' ? 'sword' : p.asset}"]`)?.getBoundingClientRect() : null;
+    const titleRect = mobileWire ? heading?.querySelector('.wireframe-title')?.getBoundingClientRect() : null;
+    // The model's section includes its own title, and ends at its content panel.
+    const rangeTop = mobileWire ? modelSlot?.top ?? titleRect?.top ?? rect.top : rect.top;
+    const rangeBottom = rect.bottom;
+    const fixedPosition = !mobilePortrait && (mobile || p.anchor === 'viewport');
+    const travel = reduced ? 0.5 : clamp((size.height - rangeTop) / (rangeBottom - rangeTop + size.height));
+    const entrance = reduced ? 1 : smooth((size.height * 0.9 - rangeTop) / (size.height * 0.65));
     // Sticky: hold the model in view while its section is on screen, then scroll away with it.
-    const desired = size.height * (0.5 + (p.y ?? 0));
+    const mobileY = p.asset === 'sword' ? 0.35 : p.asset === 'porsche' ? 0.18 : 0.5 + (p.y ?? 0);
+    const desired = size.height * (mobileWire ? mobileY : 0.5 + (p.y ?? 0));
     const lo = rect.top + size.height * 0.35;
     const hi = rect.bottom - size.height * 0.35;
     // The cars keep their separate vertical slots, even as contact enters view.
-    const anchorY = fixedPosition ? desired : lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, desired));
+    const anchorY = portraitSlot ? portraitSlot.top + portraitSlot.height / 2
+      : fixedPosition ? desired : lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, desired));
+    const horizontal = mobilePortrait || mobile && (p.asset === 'sword' || p.section === 'contact') ? 0
+      : mobile && p.asset === 'ball' ? -0.58
+      : mobile && p.asset === 'cat' ? 0.42 : narrow && !mobile ? p.x * 0.45 : p.x;
 
     g.position.set(
-      ((narrow ? p.x * 0.45 : p.x) + (reduced || fixedPosition ? 0 : (1 - entrance) * Math.sign(p.x) * 0.25
+      (horizontal + (reduced || fixedPosition || mobilePortrait ? 0 : (1 - entrance) * Math.sign(p.x) * 0.25
         + (travel - 0.5) * 0.12)) * hh * (size.width / size.height),
       -(anchorY - size.height / 2) * worldPerPx,
       z,
     );
-    g.scale.setScalar(p.size * 2 * hh * (narrow ? 0.75 : 1) * (fixedPosition ? 1 : 0.78 + entrance * 0.22));
+    const mobileSize = portraitSlot ? Math.min(portraitSlot.height, portraitSlot.width * 0.95)
+      : p.asset === 'sword' ? Math.min(size.height * 0.58, size.width * 1.15)
+      : p.asset === 'ball' ? Math.min(size.height * 0.18, size.width * 0.34)
+      : p.asset === 'cat' ? Math.min(size.height * 0.24, size.width * 0.5)
+      : Math.min(size.height * (p.asset === 'porsche' ? 0.28 : 0.32), size.width * 0.86);
+    // The same seeded edge growth and sparks used by the About Me lettering.
+    if (mobileWire) {
+      if (!booted || rangeTop > size.height * 1.1) wireReveal.current = 0;
+      else if (rangeTop < size.height * 0.94) {
+        wireReveal.current = reduced ? 1 : Math.min(1, wireReveal.current + Math.min(delta, 0.1) / WIREFRAME_DRAW.seconds);
+      }
+    }
+    g.scale.setScalar(mobile ? mobileSize * worldPerPx
+      : p.size * 2 * hh * (narrow ? 0.75 : 1) * (fixedPosition ? 1 : 0.78 + entrance * 0.22));
 
     const turn = (travel - 0.5) * Math.PI * 2;
     const mx = reduced ? 0 : motion.mx;
@@ -152,26 +191,57 @@ function Anchored({ p }: { p: Placement }) {
         break;
     }
 
+    if (mobileWire && bounds) {
+      inner.current.updateWorldMatrix(true, false);
+      const footprint = screenRect(inner.current, bounds, camera, size.width, size.height);
+      const above = anchorY - footprint.top;
+      const below = footprint.bottom - anchorY;
+      // A slot puts the sword/Porsche above the title on arrival. Once pinned,
+      // the full rotating model must scroll away before crossing the section end.
+      const firstCenter = modelSlot && p.asset !== 'ball' ? modelSlot.top + modelSlot.height / 2 : rangeTop + above;
+      const center = containedAnchor(desired,
+        Math.max(rangeTop, firstCenter - above), rangeBottom, above, below);
+      g.position.y = -(center - size.height / 2) * worldPerPx;
+      // Perspective changes the projected height as a model rotates in depth.
+      // Correct any remaining edge overflow after moving the entire group.
+      for (let pass = 0; pass < 2; pass++) {
+        inner.current.updateWorldMatrix(true, false);
+        const placed = screenRect(inner.current, bounds, camera, size.width, size.height);
+        const correction = placed.bottom > rangeBottom ? placed.bottom - rangeBottom
+          : placed.top < rangeTop ? placed.top - rangeTop : 0;
+        if (Math.abs(correction) < 0.5) break;
+        g.position.y += correction * worldPerPx * 1.05;
+      }
+    }
+
     // Fade by how much of the viewport the section fills, so neighbours cross-fade.
     const coverage = Math.max(0, Math.min(rect.bottom, size.height) - Math.max(rect.top, 0)) / size.height;
-    const presence = THREE.MathUtils.smoothstep(coverage, 0.2, 0.6);
-    // The cars belong to the contact content, not its preceding title stage.
-    // Wait until that heading leaves the viewport, including when scrolling back.
-    const heading = fixedPosition ? el.previousElementSibling?.querySelector('.wireframe-title') : null;
-    const titleClearance = heading
-      ? smooth(-heading.getBoundingClientRect().bottom / (size.height * 0.18)) : 1;
+    const presence = mobilePortrait && portraitSlot
+      ? smooth((portraitSlot.bottom - 56) / Math.max(1, portraitSlot.height * 0.65))
+      : mobileWire ? Number(wireReveal.current > 0)
+        : THREE.MathUtils.smoothstep(coverage, 0.2, 0.6);
+    // Desktop cars wait for the preceding title to clear; mobile includes the title stage.
+    const precedingTitle = !mobile && fixedPosition ? heading?.querySelector('.wireframe-title') : null;
+    const titleClearance = precedingTitle
+      ? smooth(-precedingTitle.getBoundingClientRect().bottom / (size.height * 0.18)) : 1;
     // Fade whenever text sits over the model (phones, narrow windows, long lines), so
     // the words stay readable; full strength again once it is clear of the text.
-    if (bounds) {
+    if (bounds && !mobilePortrait) {
       inner.current.updateWorldMatrix(true, false);
       const c = textCoverage(inner.current, bounds, camera, size.width, size.height);
       cover.current = c;
     }
-    const behindText = THREE.MathUtils.smoothstep(cover.current, 0.004, 0.035);
+    const behindText = mobilePortrait ? 0 : THREE.MathUtils.smoothstep(cover.current, 0.004, 0.035);
     const target = presence * titleClearance * (p.opacity ?? 0.6) * THREE.MathUtils.lerp(1, p.textDim ?? TEXT_DIM, behindText);
-    opacity.current = target;
-    g.visible = opacity.current > 0.01;
-    if (lineMaterial.current) lineMaterial.current.opacity = opacity.current;
+    opacity.current = reduced ? target : THREE.MathUtils.damp(opacity.current, target, 16, Math.min(delta, 0.1));
+    g.visible = opacity.current > 0.001;
+    if (wireEffect) {
+      wireEffect.material.uniforms.uProgress.value = mobileWire ? wireReveal.current : 1;
+      wireEffect.material.uniforms.uOpacity.value = opacity.current;
+      wireEffect.sparkMaterial.uniforms.uProgress.value = reduced ? 0 : wireReveal.current;
+      wireEffect.sparkMaterial.uniforms.uOpacity.value = mobileWire ? opacity.current : 0;
+      wireEffect.sparkMaterial.uniforms.uPixelRatio.value = gl.getPixelRatio();
+    }
 
     if (photoMaterial && photoPlane) {
       const u = photoMaterial.uniforms;
@@ -215,9 +285,10 @@ function Anchored({ p }: { p: Placement }) {
             <mesh geometry={photoPlane.geometry} material={photoPlane.material} />
           </>
         ) : (
-          <lineSegments geometry={geometry}>
-            <lineBasicMaterial ref={lineMaterial} color={baseColor} vertexColors transparent opacity={0} depthWrite={false} />
-          </lineSegments>
+          wireEffect && <>
+            <lineSegments geometry={wireEffect.geometry} material={wireEffect.material} />
+            <points geometry={wireEffect.sparkGeometry} material={wireEffect.sparkMaterial} />
+          </>
         )}
       </group>
     </group>

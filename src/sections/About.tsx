@@ -64,14 +64,15 @@ export function About() {
             </p>
           )),
           <span />,
-          <p className="skills">
-            <span className="c-dim">skills: </span>
-            {profile.about.skills.map((s) => (
-              <span className="chip" key={s}>
-                {s}
-              </span>
-            ))}
-          </p>,
+          <span className="c-yellow">SKILLS</span>,
+          ...profile.about.skillGroups.map((group) => (
+            <div className="skill-group" key={group.label}>
+              <h3 className="skill-group-label c-dim">{group.label}</h3>
+              <p className="skills">
+                {group.skills.map((skill) => <span className="chip" key={skill}>{skill}</span>)}
+              </p>
+            </div>
+          )),
         ],
       },
     ],
@@ -80,7 +81,7 @@ export function About() {
 
   return (
     <>
-    <SectionHeading text="About me" />
+    <SectionHeading text="About me" model="sword" />
     <section id="about" className="panel" aria-label="About me">
       <div className="window" data-depth>
         <ScrollTerminalSession steps={steps} finalCwd="~/about-me" />

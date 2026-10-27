@@ -24,6 +24,12 @@ function currentTextRects(now: number) {
   if (!root) return (textRects = []);
   const vh = window.innerHeight;
   const rects: Rect[] = [];
+  // Wireframe headings draw their visible letters in SVG; their text is sr-only.
+  for (const title of root.querySelectorAll<HTMLElement>('.wireframe-title')) {
+    if (parseFloat(title.style.getPropertyValue('--spark')) <= 0) continue;
+    const r = title.getBoundingClientRect();
+    if (r.bottom >= 0 && r.top <= vh) rects.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+  }
   const range = document.createRange();
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -43,7 +49,7 @@ function currentTextRects(now: number) {
 const corner = new THREE.Vector3();
 
 /** Screen rectangle (CSS px) of an object's bounding box. */
-function screenRect(object: THREE.Object3D, box: THREE.Box3, camera: THREE.Camera, width: number, height: number): Rect {
+export function screenRect(object: THREE.Object3D, box: THREE.Box3, camera: THREE.Camera, width: number, height: number): Rect {
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
   for (let i = 0; i < 8; i++) {
     corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);

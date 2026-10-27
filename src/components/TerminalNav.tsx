@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { profile } from '../data/profile';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 export interface NavSection {
   id: string;
@@ -20,6 +21,10 @@ interface Props {
  */
 export function TerminalNav({ sections, visible }: Props) {
   const reduced = useReducedMotion();
+  const mobile = useMediaQuery('(max-width: 720px)');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const [active, setActive] = useState(sections[0].id);
   const [progress, setProgress] = useState(0);
   const [size, setSize] = useState({ cols: 80, rows: 24 });
@@ -54,10 +59,34 @@ export function TerminalNav({ sections, visible }: Props) {
   }, [sections]);
 
   const go = (s: NavSection) => {
+    setMenuOpen(false);
     setFlash(`cd ${s.path}`);
     window.setTimeout(() => setFlash(null), 1100);
     document.getElementById(s.id)?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
   };
+
+  useEffect(() => {
+    if (!mobile) setMenuOpen(false);
+  }, [mobile]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) setMenuOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -72,7 +101,10 @@ export function TerminalNav({ sections, visible }: Props) {
   const activeSection = sections.find((s) => s.id === active) ?? sections[0];
 
   return (
-    <header className={`titlebar-wrap${visible ? ' is-visible' : ''}`} aria-hidden={!visible} inert={!visible}>
+    <header ref={headerRef} className={`titlebar-wrap${visible ? ' is-visible' : ''}${menuOpen ? ' menu-open' : ''}`} aria-hidden={!visible} inert={!visible}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setMenuOpen(false);
+      }}>
       <div className="titlebar">
         {/* Decorative only, like a screenshot of a terminal window. */}
         <div className="lights" aria-hidden="true">
@@ -97,9 +129,14 @@ export function TerminalNav({ sections, visible }: Props) {
           )}
         </div>
         <div className="lights-spacer" />
+        <button ref={toggleRef} className="nav-toggle" type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={menuOpen} aria-controls="section-navigation" onClick={() => setMenuOpen((open) => !open)}>
+          <span className="hamburger" aria-hidden="true"><span /><span /><span /></span>
+        </button>
       </div>
 
-      <nav className="tabs" aria-label="Sections">
+      <div className="nav-dropdown" inert={mobile && !menuOpen}>
+      <nav id="section-navigation" className="tabs" aria-label="Sections" aria-hidden={mobile && !menuOpen}>
         {sections.map((s, i) => {
           const isActive = s.id === active;
           return (
@@ -111,6 +148,7 @@ export function TerminalNav({ sections, visible }: Props) {
               aria-current={isActive ? 'location' : undefined}
               onClick={(e) => {
                 e.preventDefault();
+                if (mobile) toggleRef.current?.focus();
                 go(s);
               }}
             >
@@ -123,6 +161,7 @@ export function TerminalNav({ sections, visible }: Props) {
           );
         })}
       </nav>
+      </div>
     </header>
   );
 }

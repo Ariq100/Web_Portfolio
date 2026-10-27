@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { clamp, layoutTop, smooth } from '../scroll';
+import { wireEdgeProgress, wireEdgeStart } from '../wireframeMotion';
 
 type Point = [number, number];
 
@@ -50,7 +51,7 @@ function buildFrame(text: string) {
     vertices,
     edges: edges.map((edge) => ({
       ...edge,
-      start: 0.18 + Math.min(distance(edge.a), distance(edge.b)) / longest * 0.44 + (edge.depth ? 0.1 : 0),
+      start: wireEdgeStart(Math.min(distance(edge.a), distance(edge.b)) / longest, edge.depth),
       // Grow each segment from whichever endpoint is nearer a seed star.
       path: distance(edge.a) <= distance(edge.b)
         ? `M${edge.a.join(',')}L${edge.b.join(',')}`
@@ -60,17 +61,18 @@ function buildFrame(text: string) {
 }
 
 /** A separate scroll interval between the previous section and the next panel. */
-export function SectionHeading({ text }: { text: string }) {
+export function SectionHeading({ text, model }: { text: string; model?: 'sword' | 'porsche' }) {
   return (
     <header className="section-heading">
       <div className="window">
+        {model && <div className="section-model-slot" data-model-slot={model} aria-hidden="true" />}
         <WireframeTitle text={text} />
       </div>
     </header>
   );
 }
 
-/** Scroll scrubs the entire assembly in both directions; stopping holds a frame. */
+/** Scroll sets the drawing target; mobile CSS eases the assembly into place. */
 export function WireframeTitle({ text }: { text: string }) {
   const ref = useRef<HTMLHeadingElement>(null);
   const reduced = useReducedMotion();
@@ -104,7 +106,7 @@ export function WireframeTitle({ text }: { text: string }) {
       title.style.setProperty('--nodes', String(smooth((p - 0.22) / 0.56)));
       title.style.setProperty('--settled', String(smooth((p - 0.78) / 0.22)));
       lines.forEach((line, i) => {
-        line.style.strokeDashoffset = String(1 - smooth((p - geometry.edges[i].start) / 0.28));
+        line.style.strokeDashoffset = String(1 - wireEdgeProgress(p, geometry.edges[i].start));
       });
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
