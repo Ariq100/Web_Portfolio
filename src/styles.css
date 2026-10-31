@@ -105,6 +105,13 @@ p {
 .tear-canvas { z-index: 0; }
 .scene { z-index: 1; }
 
+@media (hover: hover) and (pointer: fine) {
+  html.has-tear-cursor,
+  html.has-tear-cursor * {
+    cursor: var(--tear-cursor), default;
+  }
+}
+
 .scanlines {
   z-index: 2;
   background:
@@ -340,6 +347,22 @@ p {
 
 .section-model-slot { display: none; }
 
+/* The contact heading sits between the two cars on every screen size. */
+.section-heading:has([data-model-slot='porsche']) > .window { position: relative; }
+.section-model-slot[data-model-slot='porsche'],
+.section-model-slot[data-model-slot='lfa'] {
+  display: block;
+  position: absolute;
+  bottom: calc(100% + 24px);
+  width: 100%;
+  height: 22svh;
+}
+.section-model-slot[data-model-slot='lfa'] {
+  top: calc(100% + 24px);
+  bottom: auto;
+  height: 26svh;
+}
+
 .wireframe-title {
   --spark: 0;
   --nodes: 0;
@@ -423,16 +446,9 @@ p {
 
 .scroll-row-content {
   opacity: var(--reveal);
-  transform: perspective(1000px)
-    translate3d(calc((1 - var(--reveal)) * -22px), calc((1 - var(--reveal)) * 54px), 0)
-    rotateX(calc((1 - var(--reveal)) * 7deg))
-    scale(calc(0.96 + var(--reveal) * 0.04));
+  transform: translateY(calc((1 - var(--reveal)) * 32px));
   transform-origin: center top;
-}
-
-.scroll-row:has(.project):nth-child(even) .scroll-row-content {
-  transform: translate3d(calc((1 - var(--reveal)) * 64px), calc((1 - var(--reveal)) * 60px), 0)
-    rotate(calc((1 - var(--reveal)) * 2deg)) scale(calc(0.94 + var(--reveal) * 0.06));
+  transition: opacity 1.3s ease, transform 1.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .scroll-row[data-revealed='false'] {
@@ -443,6 +459,7 @@ p {
 .scroll-row:focus-within .scroll-row-content {
   opacity: 1;
   transform: none;
+  transition: none;
 }
 
 .scroll-session .line.out {
@@ -453,6 +470,7 @@ p {
   display: inline-block;
   vertical-align: bottom;
   clip-path: inset(0 calc((1 - var(--typed, 1)) * 100%) 0 0);
+  transition: clip-path 1.1s ease;
 }
 
 .session-load {
@@ -902,6 +920,7 @@ body.is-booting {
 
 @media (max-width: 720px) {
   :root { --nav-h: 56px; }
+  .scene-portrait { z-index: 4; }
   body { font-size: 13.5px; }
   .panel { padding: 48px 16px; }
   .section-heading { padding-inline: 16px; }
@@ -918,6 +937,11 @@ body.is-booting {
   .wireframe-nodes { transition: opacity 1.4s ease; }
   .wireframe-star {
     transition: opacity 1.4s ease, transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .section-model-slot[data-model-slot='lfa'] {
+    top: calc(100% + 24px);
+    bottom: auto;
+    height: 26svh;
   }
   .panel-home { padding: 0; }
   .home-stage { display: block; padding: 0 16px 48px; }
@@ -1016,13 +1040,6 @@ body.is-booting {
   .project-name { font-size: 16px; }
   .project-head { flex-wrap: wrap; }
   .project-when { margin-left: 0; }
-  .scroll-row-content,
-  .scroll-row:has(.project):nth-child(even) .scroll-row-content {
-    transform: translateY(calc((1 - var(--reveal)) * 32px));
-    transition: opacity 1.3s ease, transform 1.3s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .scroll-command { transition: clip-path 1.1s ease; }
-  .scroll-row:focus-within .scroll-row-content { transition: none; }
 }
 
 /* A tall intro must remain reachable on short/landscape viewports. */

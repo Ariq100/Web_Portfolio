@@ -164,6 +164,7 @@ const planeFragmentShader = /* glsl */ `
   uniform sampler2D uTear;  // the background tear canvas: alpha 0 where ripped
   uniform vec2 uViewport;   // drawing-buffer size in px
   uniform float uOpacity;
+  uniform float uForeground;
   varying vec2 vUv;
 
   const float BG_LUMA = 0.118; // #1e1e1e, the untorn terminal background
@@ -180,6 +181,9 @@ const planeFragmentShader = /* glsl */ `
     // The photo is cropped flat at the bottom; fade that edge into the background.
     float fade = smoothstep(0.0, 0.14, vUv.y);
     keep *= fade;
+    // A foreground portrait keeps the source image's alpha, without background effects.
+    keep = mix(keep, 1.0, uForeground);
+    lip = mix(lip, 1.0, uForeground);
     float a = tex.a * keep * uOpacity;
     if (a < 0.002) discard;
     gl_FragColor = vec4(tex.rgb * keep * lip * uOpacity, a);
@@ -224,6 +228,7 @@ export function createPhotoPlane(geometry: THREE.BufferGeometry, tear: THREE.Tex
       uTear: { value: tear },
       uViewport: { value: new THREE.Vector2(1, 1) },
       uOpacity: { value: 0 },
+      uForeground: { value: 0 },
     },
     vertexShader: planeVertexShader,
     fragmentShader: planeFragmentShader,

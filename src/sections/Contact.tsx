@@ -38,7 +38,7 @@ export function Contact() {
 
   return (
     <>
-    <SectionHeading text="Contact" model="porsche" />
+    <SectionHeading text="Contact" model="porsche" trailingModel="lfa" />
     <section id="contact" className="panel panel-contact" aria-label="Contact">
       <div className="window" data-depth>
         <ScrollTerminalSession steps={steps} finalCwd="~/contact" />

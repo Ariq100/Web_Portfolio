@@ -61,12 +61,17 @@ function buildFrame(text: string) {
 }
 
 /** A separate scroll interval between the previous section and the next panel. */
-export function SectionHeading({ text, model }: { text: string; model?: 'sword' | 'porsche' }) {
+export function SectionHeading({ text, model, trailingModel }: {
+  text: string;
+  model?: 'sword' | 'porsche';
+  trailingModel?: 'lfa';
+}) {
   return (
     <header className="section-heading">
       <div className="window">
         {model && <div className="section-model-slot" data-model-slot={model} aria-hidden="true" />}
         <WireframeTitle text={text} />
+        {trailingModel && <div className="section-model-slot" data-model-slot={trailingModel} aria-hidden="true" />}
       </div>
     </header>
   );
